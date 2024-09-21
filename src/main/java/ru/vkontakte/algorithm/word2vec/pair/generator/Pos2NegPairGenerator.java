@@ -30,7 +30,7 @@ public class Pos2NegPairGenerator implements PairGenerator {
                                 SkipGramPartitioner partitioner1,
                                 SkipGramPartitioner partitioner2,
                                 SamplingMode samplingMode,
-                                int seed) {
+                                long seed) {
         this.window = window;
         this.partitioner1 = partitioner1;
         this.partitioner2 = partitioner2;

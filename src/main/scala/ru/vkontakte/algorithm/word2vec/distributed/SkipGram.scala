@@ -253,7 +253,7 @@ class SkipGram extends Serializable with Logging {
         }.partitionBy(partitionerKey).values
 
         val cur = sent.mapPartitionsWithIndex({case (idx, it) =>
-          val seed = (curEpoch * numPartitions + pI) * numPartitions + idx
+          val seed = (1L * curEpoch * numPartitions + pI) * numPartitions + idx
 
           val pairGenerator = new BatchedGenerator({
             if (samplingMode == SamplingMode.WINDOW) {
