@@ -142,9 +142,9 @@ public class SkipGramLocal {
 
         if (opts.samplingMode == SamplingMode.SAMPLE_POS2NEG) {
             unigramTable = initUnigramTable(this.cnR, opts.pow,
-                    vocabR.keySet().stream()
+                    vocabR.keySet().longStream()
                         .filter(e -> e < 0)
-                        .mapToInt(e -> vocabR.get(e.longValue())).toArray());
+                        .mapToInt(e -> vocabR.get(e)).toArray());
         } else if (opts.pow > 0) {
             initUnigramTable(this.cnR, opts.pow, null);
         } else {
@@ -198,12 +198,12 @@ public class SkipGramLocal {
                     } else {
                         if (unigramTable != null) {
                             target = unigramTable[random.nextInt(unigramTable.length)];
-                            while (target == -1 || PairGenerator.skipPair(l[pos], i2R[target], opts.samplingMode)) {
+                            while (target == -1 || l[pos] == i2R[target]) {
                                 target = unigramTable[random.nextInt(unigramTable.length)];
                             }
                         } else {
                             target = random.nextInt(vocabR.size());
-                            while (PairGenerator.skipPair(l[pos], i2R[target], opts.samplingMode)) {
+                            while (l[pos] == i2R[target]) {
                                 target = random.nextInt(vocabR.size());
                             }
                         }
@@ -263,14 +263,14 @@ public class SkipGramLocal {
 
     public Iterator<ItemData> flush() {
         return Iterators.concat(
-                vocabL.keySet().stream().map(e -> {
-                    int i = vocabL.get(e.longValue());
+                vocabL.keySet().longStream().mapToObj(e -> {
+                    int i = vocabL.get(e);
                     return new ItemData(ItemData.TYPE_LEFT, e, cnL[i],
                             Arrays.copyOfRange(syn0, opts.vectorSize() * i, opts.vectorSize() * (i + 1)));
 
                 }).iterator(),
-                vocabR.keySet().stream().map(e -> {
-                    int i = vocabR.get(e.longValue());
+                vocabR.keySet().longStream().mapToObj(e -> {
+                    int i = vocabR.get(e);
                     return new ItemData(ItemData.TYPE_RIGHT, e, cnR[i],
                             Arrays.copyOfRange(syn1neg, opts.vectorSize() * i, opts.vectorSize() * (i + 1)));
 
