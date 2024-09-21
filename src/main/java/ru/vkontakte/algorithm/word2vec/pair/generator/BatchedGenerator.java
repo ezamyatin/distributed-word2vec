@@ -1,10 +1,14 @@
 package ru.vkontakte.algorithm.word2vec.pair.generator;
 
 import it.unimi.dsi.fastutil.longs.LongArrayList;
+import ru.vkontakte.algorithm.word2vec.SkipGramUtil;
 import ru.vkontakte.algorithm.word2vec.pair.LongPair;
 import ru.vkontakte.algorithm.word2vec.pair.LongPairMulti;
+import ru.vkontakte.algorithm.word2vec.pair.SamplingMode;
+import ru.vkontakte.algorithm.word2vec.pair.SkipGramPartitioner;
 
 import java.io.Serializable;
+import java.util.Iterator;
 
 /**
  * @author ezamyatin
@@ -16,58 +20,100 @@ public class BatchedGenerator implements Serializable {
     private final int batchSize;
 
     private final LongArrayList[] l, r;
-    private int filled = -1;
-    private int lastPtr = 0;
+    private final SkipGramPartitioner partitioner1;
+    private final SkipGramPartitioner partitioner2;
 
-    public BatchedGenerator(PairGenerator pairGenerator) {
-        this.pairGenerator = pairGenerator;
+    public BatchedGenerator(PairGenerator pairGenerator,
+                            SkipGramPartitioner partitioner1,
+                            SkipGramPartitioner partitioner2) {
+        this.partitioner1 = partitioner1;
+        this.partitioner2 = partitioner2;
+        this.pairGenerator = new PairGenerator() {
+            @Override
+            public Iterator<LongPair> generate(long[] sent) {
+                return pairGenerator.generate(sent);
+            }
 
-        l = new LongArrayList[pairGenerator.numPartitions()];
-        r = new LongArrayList[pairGenerator.numPartitions()];
+            @Override
+            public boolean skipPair(long i, long j, SamplingMode samplingMode) {
+                return PairGenerator.super.skipPair(i, j, samplingMode) ||
+                        partitioner1.getPartition(i) != partitioner2.getPartition(j);
+            }
+        };
 
-        this.batchSize = TOTAL_BATCH_SIZE / pairGenerator.numPartitions();
-        for (int i = 0; i < pairGenerator.numPartitions(); ++i) {
+        assert partitioner1.getNumPartitions() == partitioner2.getNumPartitions();
+
+        l = new LongArrayList[partitioner1.getNumPartitions()];
+        r = new LongArrayList[partitioner1.getNumPartitions()];
+
+        this.batchSize = TOTAL_BATCH_SIZE / partitioner1.getNumPartitions();
+        for (int i = 0; i < partitioner1.getNumPartitions(); ++i) {
             l[i] = new LongArrayList(batchSize);
             r[i] = new LongArrayList(batchSize);
         }
     }
 
-    public void reset(long[] sent) {
-        assert !pairGenerator.hasNext();
-        pairGenerator.reset(sent);
+
+    public Iterator<LongPairMulti> generate(long[] sent) {
+        return SkipGramUtil.untilNull(new Iterator<LongPairMulti>() {
+            Iterator<LongPair> it = pairGenerator.generate(sent);
+            private int filled = -1;
+
+            @Override
+            public boolean hasNext() {
+                return true;
+            }
+
+            @Override
+            public LongPairMulti next() {
+                while (it.hasNext() && filled == -1) {
+                    LongPair pair = it.next();
+                    int part = partitioner1.getPartition(pair.left);
+                    l[part].add(pair.left);
+                    r[part].add(pair.right);
+
+                    if (l[part].size() >= batchSize) {
+                        filled = part;
+                    }
+                }
+
+                if (filled != -1) {
+                    LongPairMulti result = new LongPairMulti(filled, l[filled].toLongArray(), r[filled].toLongArray());
+                    l[filled].clear();
+                    r[filled].clear();
+                    filled = -1;
+                    return result;
+                }
+
+                return null;
+            }
+        });
     }
 
-    public LongPairMulti next(boolean force) {
-        assert force || lastPtr == 0;
+    public Iterator<LongPairMulti> flush() {
+        return SkipGramUtil.untilNull(new Iterator<LongPairMulti>() {
+            int ptr = 0;
 
-        while (pairGenerator.hasNext() && filled == -1) {
-            LongPair pair = pairGenerator.next();
-            l[pair.part].add(pair.left);
-            r[pair.part].add(pair.right);
-
-            if (l[pair.part].size() >= batchSize) {
-                filled = pair.part;
-            }
-        }
-
-        if (filled == -1 && force) {
-            while (lastPtr < l.length && l[lastPtr].isEmpty()) {
-                lastPtr += 1;
+            @Override
+            public boolean hasNext() {
+                return true;
             }
 
-            if (lastPtr < l.length) {
-                filled = lastPtr;
+            @Override
+            public LongPairMulti next() {
+                while (ptr < l.length && l[ptr].isEmpty()) {
+                    ptr += 1;
+                }
+
+                if (ptr < l.length) {
+                    LongPairMulti result = new LongPairMulti(ptr, l[ptr].toLongArray(), r[ptr].toLongArray());
+                    l[ptr].clear();
+                    r[ptr].clear();
+                    return result;
+                }
+
+                return null;
             }
-        }
-
-        if (filled != -1 && filled < l.length) {
-            LongPairMulti result = new LongPairMulti(filled, l[filled].toLongArray(), r[filled].toLongArray());
-            l[filled].clear();
-            r[filled].clear();
-            filled = -1;
-            return result;
-        }
-
-        return null;
+        });
     }
 }

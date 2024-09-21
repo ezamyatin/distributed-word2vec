@@ -11,15 +11,11 @@ import java.util.Iterator;
  * @author ezamyatin
  **/
 
-public interface PairGenerator extends Iterator<LongPair>, Serializable {
-    static boolean skipPair(long i, long j, SamplingMode samplingMode) {
+public interface PairGenerator extends Serializable {
+
+    default boolean skipPair(long i, long j, SamplingMode samplingMode) {
         return i == j;
     }
 
-    void reset(long[] sent);
-
-    int numPartitions();
-
-    SkipGramPartitioner getPartitioner1();
-    SkipGramPartitioner getPartitioner2();
+    Iterator<LongPair> generate(long[] sent);
 }

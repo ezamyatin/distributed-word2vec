@@ -260,17 +260,16 @@ class SkipGram extends Serializable with Logging {
               assert(false)
               null
             } else if (samplingMode == SamplingMode.SAMPLE) {
-              new SampleGenerator(window, partitioner1, partitioner2, samplingMode, seed)
+              new SampleGenerator(window, samplingMode, seed)
             } else if (samplingMode == SamplingMode.SAMPLE_POS2NEG) {
-              new Pos2NegPairGenerator(window, partitioner1, partitioner2, samplingMode, seed)
+              new Pos2NegPairGenerator(window, samplingMode, seed)
             } else {
               assert(false)
               null
             }
-          })
+          }, partitioner1, partitioner2)
 
-          it.flatMap{s => pairGenerator.reset(s); Iterator.continually(pairGenerator.next(false)).takeWhile(_ != null)} ++
-            Iterator.continually(pairGenerator.next(true)).takeWhile(_ != null)
+          it.flatMap(it => pairGenerator.generate(it).asScala) ++ pairGenerator.flush().asScala
         })
 
         val newEmb = (cur.zipPartitions(embLR) { case (sIt, eItLR) =>
