@@ -1,0 +1,279 @@
+package ru.vkontakte.algorithm.word2vec.local;
+
+import com.google.common.collect.Iterators;
+import com.google.common.util.concurrent.AtomicDouble;
+import it.unimi.dsi.fastutil.floats.FloatArrayList;
+import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
+import com.github.fommil.netlib.BLAS;
+import it.unimi.dsi.fastutil.longs.LongArrayList;
+import ru.vkontakte.algorithm.word2vec.SkipGramUtil;
+import ru.vkontakte.algorithm.word2vec.pair.SamplingMode;
+import ru.vkontakte.algorithm.word2vec.pair.generator.PairGenerator;
+
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.LongConsumer;
+
+/**
+ * @author ezamyatin
+ **/
+public class SkipGramLocal {
+    private final static int UNIGRAM_TABLE_SIZE = 100000000;
+
+    private static class ExpTable {
+        final public static int EXP_TABLE_SIZE = 1000;
+        final public static int MAX_EXP = 6;
+
+        public float[] sigm;
+        public float[] loss0;
+        public float[] loss1;
+
+        private static final ExpTable INSTANCE = new ExpTable();
+
+        private ExpTable() {
+            sigm = new float[EXP_TABLE_SIZE];
+            loss0 = new float[EXP_TABLE_SIZE];
+            loss1 = new float[EXP_TABLE_SIZE];
+
+            int i = 0;
+            while (i < EXP_TABLE_SIZE) {
+                double tmp = Math.exp((2.0 * i / EXP_TABLE_SIZE - 1.0) * MAX_EXP);
+                sigm[i] = (float)(tmp / (tmp + 1.0));
+                loss0[i] = (float)Math.log(sigm[i]);
+                loss1[i] = (float)Math.log(1 - sigm[i]);
+                i += 1;
+            }
+        }
+
+        public static ExpTable getInstance() {
+            return INSTANCE;
+        }
+    }
+
+    private final SkipGramOpts opts;
+
+    private Long2IntOpenHashMap vocabL, vocabR;
+    private long[] i2R;
+    private long[] cnL, cnR;
+    private float[] syn0, syn1neg;
+    private int[] unigramTable;
+    private ThreadLocalRandom random;
+    private final BLAS blas = BLAS.getInstance();
+
+    public AtomicDouble loss;
+    public AtomicLong lossn;
+
+
+    private static int[] initUnigramTable(long[] cn, double pow, int[] indices) {
+        int[] table = new int[UNIGRAM_TABLE_SIZE];
+
+        int n;
+        if (indices != null) {
+            n = indices.length;
+        } else {
+            n = cn.length;
+        }
+
+        int a = 0;
+        double trainWordsPow = 0.0;
+
+        while (a < n) {
+            trainWordsPow += Math.pow(indices == null ? cn[a] : cn[indices[a]], pow);
+            a += 1;
+        }
+
+        int i = 0;
+        a = 0;
+        double d1 = Math.pow(indices == null ? cn[i] : cn[indices[i]], pow) / trainWordsPow;
+
+        while (a < table.length && i < n) {
+            table[a] = indices == null ? i : indices[i];
+            if ((double)a / table.length > d1) {
+                i += 1;
+                d1 += Math.pow(cn[indices == null ? i : indices[i]], pow) / trainWordsPow;
+            }
+            a += 1;
+        }
+
+        return table;
+    }
+
+    public SkipGramLocal(SkipGramOpts opts, Iterator<ItemData> iterator) {
+        this.opts = opts;
+        this.vocabL = new Long2IntOpenHashMap();
+        this.vocabR = new Long2IntOpenHashMap();
+
+        LongArrayList cnL = new LongArrayList();
+        LongArrayList cnR = new LongArrayList();
+
+        FloatArrayList rawSyn0 = new FloatArrayList();
+        FloatArrayList rawSyn1neg = new FloatArrayList();
+
+        while (iterator.hasNext()) {
+            ItemData itemData = iterator.next();
+
+            if (itemData.type == ItemData.TYPE_LEFT) {
+                int i = vocabL.size();
+                vocabL.put(itemData.id, i);
+                cnL.add(itemData.cn);
+                for (float v : itemData.f) {
+                    rawSyn0.add(v);
+                }
+            } else {
+                int i = vocabR.size();
+                vocabR.put(itemData.id, i);
+                cnR.add(itemData.cn);
+                for (float v : itemData.f) {
+                    rawSyn1neg.add(v);
+                }
+            }
+        }
+
+        this.i2R = new long[vocabR.size()];
+        vocabR.keySet().forEach((LongConsumer)e -> i2R[vocabR.get(e)] = e);
+
+        this.cnL = cnL.toLongArray();
+        cnL = null;
+        this.cnR = cnR.toLongArray();
+        cnR = null;
+
+        if (opts.samplingMode == SamplingMode.SAMPLE_POS2NEG) {
+            unigramTable = initUnigramTable(this.cnR, opts.pow,
+                    vocabR.keySet().stream()
+                        .filter(e -> e < 0)
+                        .mapToInt(e -> vocabR.get(e.longValue())).toArray());
+        } else if (opts.pow > 0) {
+            initUnigramTable(this.cnR, opts.pow, null);
+        } else {
+            unigramTable = null;
+        }
+        syn0 = rawSyn0.toFloatArray();
+        rawSyn0 = null;
+        syn1neg = rawSyn1neg.toFloatArray();
+        rawSyn1neg = null;
+
+        random = ThreadLocalRandom.current();
+        loss = new AtomicDouble(0);
+        lossn = new AtomicLong(0);
+    }
+
+    public static float[] initEmbedding(int dim, boolean useBias, Random rnd) {
+        float[] f = new float[useBias ? dim + 1: dim];
+        for (int i = 0; i < dim; i++) {
+            f[i] = (rnd.nextFloat() - 0.5f) / dim;
+        }
+        return f;
+    }
+
+    public void optimizeBatch(long[] l, long[] r) {
+        assert l.length == r.length;
+        SkipGramUtil.shuffle(l, r, random);
+
+        double lloss = 0.0;
+        long llossn = 0L;
+        int pos = 0;
+        int word ;
+        int lastWord;
+        float[] neu1e = new float[opts.vectorSize()];
+        ExpTable expTable = ExpTable.getInstance();
+
+        while (pos < l.length) {
+            lastWord = vocabL.getOrDefault(l[pos], -1);
+            word = vocabR.getOrDefault(r[pos], -1);
+
+            if (word != -1 && lastWord != -1) {
+                int l1 = lastWord * opts.vectorSize();
+                Arrays.fill(neu1e, 0);
+                int target;
+                int label;
+                int d = 0;
+
+                while (d < opts.negative + 1) {
+                    if (d == 0) {
+                        target = word;
+                        label = 1;
+                    } else {
+                        if (unigramTable != null) {
+                            target = unigramTable[random.nextInt(unigramTable.length)];
+                            while (target == -1 || PairGenerator.skipPair(l[pos], i2R[target], opts.samplingMode)) {
+                                target = unigramTable[random.nextInt(unigramTable.length)];
+                            }
+                        } else {
+                            target = random.nextInt(vocabR.size());
+                            while (PairGenerator.skipPair(l[pos], i2R[target], opts.samplingMode)) {
+                                target = random.nextInt(vocabR.size());
+                            }
+                        }
+                        label = 0;
+                    }
+                    int l2 = target * opts.vectorSize();
+                    float f = blas.sdot(opts.dim, syn0, l1, 1, syn1neg, l2, 1);
+                    if (opts.useBias) {
+                        f += syn0[l1 + opts.dim];
+                        f += syn1neg[l2 + opts.dim];
+                    }
+
+                    float g;
+                    float sigm;
+
+                    if (f > ExpTable.MAX_EXP) {
+                        sigm = 1.0f;
+                        lloss += (-(label > 0 ? 0 : -6.00247569));
+                        llossn += 1;
+                    } else if (f < -ExpTable.MAX_EXP) {
+                        sigm = 0.0f;
+                        lloss += (-(label > 0 ? -6.00247569 : 0));
+                        llossn += 1;
+                    } else {
+                        int ind = (int)((f + ExpTable.MAX_EXP) * (ExpTable.EXP_TABLE_SIZE / ExpTable.MAX_EXP / 2.0));
+                        sigm = expTable.sigm[ind];
+                        lloss += (-((label > 0) ? expTable.loss1[ind] : expTable.loss0[ind]));
+                        llossn += 1;
+                    }
+                    g = (float)((label - sigm) * opts.lr);
+
+                    if (opts.lambda > 0) {
+                        blas.saxpy(opts.dim, (float)(-opts.lambda * opts.lr), syn0, l1, 1, neu1e, 0, 1);
+                    }
+                    blas.saxpy(opts.dim, g, syn1neg, l2, 1, neu1e, 0, 1);
+                    if (opts.useBias) {
+                        neu1e[opts.dim] += g * 1;
+                    }
+
+                    if (opts.lambda > 0) {
+                        blas.saxpy(opts.dim, (float)(-opts.lambda * opts.lr), syn1neg, l2, 1, syn1neg, l2, 1);
+                    }
+                    blas.saxpy(opts.dim, g, syn0, l1, 1, syn1neg, l2, 1);
+                    if (opts.useBias) {
+                        syn1neg[l2 + opts.dim] += g * 1;
+                    }
+                    d += 1;
+                }
+                blas.saxpy(opts.vectorSize(), 1.0f, neu1e, 0, 1, syn0, l1, 1);
+            }
+            pos += 1;
+        }
+
+        loss.addAndGet(lloss);
+        lossn.addAndGet(llossn);
+    }
+
+    public Iterator<ItemData> flush() {
+        return Iterators.concat(
+                vocabL.keySet().stream().map(e -> {
+                    int i = vocabL.get(e.longValue());
+                    return new ItemData(ItemData.TYPE_LEFT, e, cnL[i],
+                            Arrays.copyOfRange(syn0, opts.vectorSize() * i, opts.vectorSize() * (i + 1)));
+
+                }).iterator(),
+                vocabR.keySet().stream().map(e -> {
+                    int i = vocabR.get(e.longValue());
+                    return new ItemData(ItemData.TYPE_RIGHT, e, cnR[i],
+                            Arrays.copyOfRange(syn1neg, opts.vectorSize() * i, opts.vectorSize() * (i + 1)));
+
+                }).iterator());
+    }
+}
