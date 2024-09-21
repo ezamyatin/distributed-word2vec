@@ -1,5 +1,6 @@
 package ru.vkontakte.algorithm.word2vec.pair.generator;
 
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import ru.vkontakte.algorithm.word2vec.SkipGramUtil;
 import ru.vkontakte.algorithm.word2vec.pair.LongPair;
@@ -29,15 +30,23 @@ public class BatchedGenerator implements Serializable {
         this.partitioner1 = partitioner1;
         this.partitioner2 = partitioner2;
         this.pairGenerator = new PairGenerator() {
+            private IntArrayList p1 = new IntArrayList(1000);
+            private IntArrayList p2 = new IntArrayList(1000);
+
             @Override
             public Iterator<LongPair> generate(long[] sent) {
+                p1.clear();
+                p2.clear();
+                for (long s : sent) {
+                    p1.add(partitioner1.getPartition(s));
+                    p2.add(partitioner2.getPartition(s));
+                }
                 return pairGenerator.generate(sent);
             }
 
             @Override
             public boolean skipPair(long[] sent, int i, int j, SamplingMode samplingMode) {
-                return PairGenerator.super.skipPair(sent, i, j, samplingMode) ||
-                        partitioner1.getPartition(sent[i]) != partitioner2.getPartition(sent[j]);
+                return p1.getInt(i) != p2.getInt(j) || PairGenerator.super.skipPair(sent, i, j, samplingMode);
             }
         };
 
