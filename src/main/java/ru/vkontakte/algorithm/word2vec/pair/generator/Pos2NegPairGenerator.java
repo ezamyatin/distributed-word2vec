@@ -42,17 +42,12 @@ public class Pos2NegPairGenerator implements PairGenerator {
             }
         }
 
-        return SkipGramUtil.untilNull(new Iterator<LongPair>() {
+        return new UntilNullIterator<LongPair>() {
             private int i = 0;
             private int j = 0;
 
             @Override
-            public boolean hasNext() {
-                return true;
-            }
-
-            @Override
-            public LongPair next() {
+            public LongPair generateOrNull() {
                 while (i < sentL.size()) {
                     int n = Math.min(2 * window, sentR.size() - 1);
 
@@ -70,6 +65,6 @@ public class Pos2NegPairGenerator implements PairGenerator {
                 }
                 return null;
             }
-        });
+        };
     }
 }

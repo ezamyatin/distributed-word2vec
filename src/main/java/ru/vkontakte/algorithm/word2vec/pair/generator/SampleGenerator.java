@@ -25,17 +25,12 @@ public class SampleGenerator implements PairGenerator {
     }
 
     public Iterator<LongPair> generate(long[] sent) {
-        return SkipGramUtil.untilNull(new Iterator<LongPair>() {
+        return new UntilNullIterator<LongPair>() {
             private int i = 0;
             private int j = 0;
 
             @Override
-            public boolean hasNext() {
-                return true;
-            }
-
-            @Override
-            public LongPair next() {
+            public LongPair generateOrNull() {
                 while (i < sent.length) {
                     int n = Math.min(2 * window, sent.length - 1);
 
@@ -56,6 +51,6 @@ public class SampleGenerator implements PairGenerator {
                 }
                 return null;
             }
-        });
+        };
     }
 }

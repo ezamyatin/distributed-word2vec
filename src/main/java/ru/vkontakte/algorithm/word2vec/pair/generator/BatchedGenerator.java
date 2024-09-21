@@ -64,17 +64,13 @@ public class BatchedGenerator implements Serializable {
 
 
     public Iterator<LongPairMulti> generate(long[] sent) {
-        return SkipGramUtil.untilNull(new Iterator<LongPairMulti>() {
-            Iterator<LongPair> it = pairGenerator.generate(sent);
+        return new UntilNullIterator<LongPairMulti>() {
+
+            private final Iterator<LongPair> it = pairGenerator.generate(sent);
             private int filled = -1;
 
             @Override
-            public boolean hasNext() {
-                return true;
-            }
-
-            @Override
-            public LongPairMulti next() {
+            public LongPairMulti generateOrNull() {
                 while (it.hasNext() && filled == -1) {
                     LongPair pair = it.next();
                     int part = partitioner1.getPartition(pair.left);
@@ -96,20 +92,15 @@ public class BatchedGenerator implements Serializable {
 
                 return null;
             }
-        });
+        };
     }
 
     public Iterator<LongPairMulti> flush() {
-        return SkipGramUtil.untilNull(new Iterator<LongPairMulti>() {
+        return new UntilNullIterator<LongPairMulti>() {
             int ptr = 0;
 
             @Override
-            public boolean hasNext() {
-                return true;
-            }
-
-            @Override
-            public LongPairMulti next() {
+            public LongPairMulti generateOrNull() {
                 while (ptr < l.length && l[ptr].isEmpty()) {
                     ptr += 1;
                 }
@@ -123,6 +114,6 @@ public class BatchedGenerator implements Serializable {
 
                 return null;
             }
-        });
+        };
     }
 }
