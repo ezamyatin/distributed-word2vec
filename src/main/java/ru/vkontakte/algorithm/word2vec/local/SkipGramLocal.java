@@ -7,6 +7,7 @@ import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import com.github.fommil.netlib.BLAS;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import ru.vkontakte.algorithm.word2vec.SkipGramUtil;
+import ru.vkontakte.algorithm.word2vec.pair.LongPairMulti;
 import ru.vkontakte.algorithm.word2vec.pair.SamplingMode;
 import ru.vkontakte.algorithm.word2vec.pair.generator.PairGenerator;
 
@@ -259,6 +260,10 @@ public class SkipGramLocal {
 
         loss.addAndGet(lloss);
         lossn.addAndGet(llossn);
+    }
+
+    public void optimize(Iterator<LongPairMulti> data, int cpus) {
+        ParItr.foreach(data, t -> this.optimizeBatch(t.l, t.r), cpus);
     }
 
     public Iterator<ItemData> flush() {

@@ -277,7 +277,7 @@ class SkipGram extends Serializable with Logging {
           val sg = new SkipGramLocal(new SkipGramOpts(dotVectorSize, useBias, negative, window,
             pow, curLearningRate, lambda, samplingMode), eItLR.asJava)
 
-          ParItr.foreach(sIt.asJava, (t: LongPairMulti) => sg.optimizeBatch(t.l, t.r), numThread)
+          sg.optimize(sIt.asJava, numThread)
 
           println("LOSS: " + sg.loss.doubleValue() / sg.lossn.longValue() + " (" + sg.loss.doubleValue() + " / " + sg.lossn.longValue() + ")")
 
