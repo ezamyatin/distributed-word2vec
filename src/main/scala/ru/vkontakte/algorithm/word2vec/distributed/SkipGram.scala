@@ -256,13 +256,13 @@ class SkipGram extends Serializable with Logging {
           val seed = (1L * curEpoch * numPartitions + pI) * numPartitions + idx
 
           val pairGenerator = new BatchedGenerator({
-            if (samplingMode == SamplingMode.WINDOW) {
-              assert(false)
-              null
-            } else if (samplingMode == SamplingMode.SAMPLE) {
+            if (samplingMode == SamplingMode.SAMPLE) {
               new SampleGenerator(window, samplingMode, seed)
             } else if (samplingMode == SamplingMode.SAMPLE_POS2NEG) {
               new Pos2NegPairGenerator(window, samplingMode, seed)
+            } else if (samplingMode == SamplingMode.WINDOW) {
+              assert(false)
+              null
             } else {
               assert(false)
               null
