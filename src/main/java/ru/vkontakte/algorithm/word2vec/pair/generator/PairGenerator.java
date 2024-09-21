@@ -13,8 +13,8 @@ import java.util.Iterator;
 
 public interface PairGenerator extends Serializable {
 
-    default boolean skipPair(long i, long j, SamplingMode samplingMode) {
-        return i == j;
+    default boolean skipPair(long[] sent, int i, int j, SamplingMode samplingMode) {
+        return sent[i] == sent[j];
     }
 
     Iterator<LongPair> generate(long[] sent);

@@ -49,7 +49,7 @@ public class SampleGenerator implements PairGenerator {
                         }
 
                         j += 1;
-                        if (!skipPair(sent[i], sent[c], samplingMode)) {
+                        if (!skipPair(sent, i, c, samplingMode)) {
                             return new LongPair(sent[i], sent[c]);
                         }
                     }

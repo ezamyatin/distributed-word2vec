@@ -19,7 +19,7 @@ public class Pos2NegPairGenerator implements PairGenerator {
     private final SamplingMode samplingMode;
     private final Random random;
 
-    private final LongArrayList sentL, sentR;
+    private final IntArrayList sentL, sentR;
 
     public Pos2NegPairGenerator(int window,
                                 SamplingMode samplingMode,
@@ -28,8 +28,8 @@ public class Pos2NegPairGenerator implements PairGenerator {
         this.samplingMode = samplingMode;
         this.random = new Random(seed);
 
-        this.sentL = new LongArrayList(1000);
-        this.sentR = new LongArrayList(1000);
+        this.sentL = new IntArrayList(1000);
+        this.sentR = new IntArrayList(1000);
     }
 
     public Iterator<LongPair> generate(long[] sent) {
@@ -37,11 +37,11 @@ public class Pos2NegPairGenerator implements PairGenerator {
         sentL.clear();
         sentR.clear();
 
-        for (long value : sent) {
-            if (value > 0) {
-                sentL.add(value);
+        for (int i = 0; i < sent.length; ++i) {
+            if (sent[i] > 0) {
+                sentL.add(i);
             } else {
-                sentR.add(value);
+                sentR.add(i);
             }
         }
 
@@ -60,14 +60,11 @@ public class Pos2NegPairGenerator implements PairGenerator {
                     int n = Math.min(2 * window, sentR.size() - 1);
 
                     while (j < n) {
-                        int c = i;
-                        while (c == i) {
-                            c = random.nextInt(sentR.size());
-                        }
+                        int c = random.nextInt(sentR.size());;
 
                         j += 1;
-                        if (!skipPair(sentL.getLong(i), sentR.getLong(c), samplingMode)) {
-                            return new LongPair(sentL.getLong(i), sentR.getLong(c));
+                        if (!skipPair(sent, sentL.getInt(i), sentR.getInt(c), samplingMode)) {
+                            return new LongPair(sent[sentL.getInt(i)], sent[sentR.getInt(c)]);
                         }
                     }
 

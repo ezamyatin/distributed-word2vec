@@ -35,9 +35,9 @@ public class BatchedGenerator implements Serializable {
             }
 
             @Override
-            public boolean skipPair(long i, long j, SamplingMode samplingMode) {
-                return PairGenerator.super.skipPair(i, j, samplingMode) ||
-                        partitioner1.getPartition(i) != partitioner2.getPartition(j);
+            public boolean skipPair(long[] sent, int i, int j, SamplingMode samplingMode) {
+                return PairGenerator.super.skipPair(sent, i, j, samplingMode) ||
+                        partitioner1.getPartition(sent[i]) != partitioner2.getPartition(sent[j]);
             }
         };
 
