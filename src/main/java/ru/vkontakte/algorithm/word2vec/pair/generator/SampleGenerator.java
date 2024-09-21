@@ -1,11 +1,8 @@
 package ru.vkontakte.algorithm.word2vec.pair.generator;
 
-import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.longs.LongArrayList;
 import ru.vkontakte.algorithm.word2vec.SkipGramUtil;
 import ru.vkontakte.algorithm.word2vec.pair.LongPair;
 import ru.vkontakte.algorithm.word2vec.pair.SamplingMode;
-import ru.vkontakte.algorithm.word2vec.pair.SkipGramPartitioner;
 
 import java.util.Iterator;
 import java.util.Random;
@@ -49,7 +46,7 @@ public class SampleGenerator implements PairGenerator {
                         }
 
                         j += 1;
-                        if (!skipPair(sent, i, c, samplingMode)) {
+                        if (acceptPair(sent, i, c, samplingMode)) {
                             return new LongPair(sent[i], sent[c]);
                         }
                     }

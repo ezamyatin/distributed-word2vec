@@ -1,12 +1,9 @@
 package ru.vkontakte.algorithm.word2vec.pair.generator;
 
-import com.google.common.collect.Iterators;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.longs.LongArrayList;
 import ru.vkontakte.algorithm.word2vec.SkipGramUtil;
 import ru.vkontakte.algorithm.word2vec.pair.LongPair;
 import ru.vkontakte.algorithm.word2vec.pair.SamplingMode;
-import ru.vkontakte.algorithm.word2vec.pair.SkipGramPartitioner;
 
 import java.util.Iterator;
 import java.util.Random;
@@ -63,7 +60,7 @@ public class Pos2NegPairGenerator implements PairGenerator {
                         int c = random.nextInt(sentR.size());;
 
                         j += 1;
-                        if (!skipPair(sent, sentL.getInt(i), sentR.getInt(c), samplingMode)) {
+                        if (acceptPair(sent, sentL.getInt(i), sentR.getInt(c), samplingMode)) {
                             return new LongPair(sent[sentL.getInt(i)], sent[sentR.getInt(c)]);
                         }
                     }
