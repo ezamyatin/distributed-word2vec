@@ -57,16 +57,16 @@ public class SkipGramLocal {
 
     private final SkipGramOpts opts;
 
-    private Long2IntOpenHashMap vocabL, vocabR;
-    private long[] i2R;
-    private long[] cnL, cnR;
-    private float[] syn0, syn1neg;
-    private int[] unigramTable;
-    private ThreadLocalRandom random;
+    private final Long2IntOpenHashMap vocabL, vocabR;
+    private final long[] i2R;
+    private final long[] cnL, cnR;
+    private final float[] syn0, syn1neg;
+    private final int[] unigramTable;
+    private final ThreadLocalRandom random;
     private final BLAS blas = BLAS.getInstance();
 
-    public AtomicDouble loss;
-    public AtomicLong lossn;
+    public final AtomicDouble loss;
+    public final AtomicLong lossn;
 
 
     private static int[] initUnigramTable(long[] cn, double pow, @Nullable int[] indices) {
@@ -148,7 +148,7 @@ public class SkipGramLocal {
                         .filter(e -> e < 0)
                         .mapToInt(e -> vocabR.get(e)).toArray());
         } else if (opts.pow > 0) {
-            initUnigramTable(this.cnR, opts.pow, null);
+            unigramTable = initUnigramTable(this.cnR, opts.pow, null);
         } else {
             unigramTable = null;
         }
@@ -285,4 +285,6 @@ public class SkipGramLocal {
 
                 }).iterator());
     }
+
+
 }
