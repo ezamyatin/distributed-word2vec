@@ -68,7 +68,6 @@ public class SkipGramLocal {
     public final AtomicDouble loss;
     public final AtomicLong lossn;
 
-
     private static int[] initUnigramTable(long[] cn, double pow, @Nullable int[] indices) {
         int[] table = new int[UNIGRAM_TABLE_SIZE];
 
