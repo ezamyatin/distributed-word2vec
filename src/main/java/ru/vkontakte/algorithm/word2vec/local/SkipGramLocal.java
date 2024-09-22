@@ -11,6 +11,7 @@ import ru.vkontakte.algorithm.word2vec.pair.LongPairMulti;
 import ru.vkontakte.algorithm.word2vec.pair.SamplingMode;
 import ru.vkontakte.algorithm.word2vec.pair.generator.PairGenerator;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Random;
@@ -68,7 +69,7 @@ public class SkipGramLocal {
     public AtomicLong lossn;
 
 
-    private static int[] initUnigramTable(long[] cn, double pow, int[] indices) {
+    private static int[] initUnigramTable(long[] cn, double pow, @Nullable int[] indices) {
         int[] table = new int[UNIGRAM_TABLE_SIZE];
 
         int n;
@@ -169,14 +170,14 @@ public class SkipGramLocal {
         return f;
     }
 
-    public void optimizeBatch(long[] l, long[] r) {
+    public void optimizeBatch(long[] l, long[] r, @Nullable float[] w) {
         assert l.length == r.length;
         SkipGramUtil.shuffle(l, r, random);
 
         double lloss = 0.0;
         long llossn = 0L;
         int pos = 0;
-        int word ;
+        int word;
         int lastWord;
         float[] neu1e = new float[opts.vectorSize()];
         ExpTable expTable = ExpTable.getInstance();
@@ -190,12 +191,14 @@ public class SkipGramLocal {
                 Arrays.fill(neu1e, 0);
                 int target;
                 int label;
+                float weight;
                 int d = 0;
 
                 while (d < opts.negative + 1) {
                     if (d == 0) {
                         target = word;
                         label = 1;
+                        weight = w == null ? 1f : w[pos];
                     } else {
                         if (unigramTable != null) {
                             target = unigramTable[random.nextInt(unigramTable.length)];
@@ -208,6 +211,7 @@ public class SkipGramLocal {
                                 target = random.nextInt(vocabR.size());
                             }
                         }
+                        weight = 1f;
                         label = 0;
                     }
                     int l2 = target * opts.vectorSize();
@@ -234,7 +238,7 @@ public class SkipGramLocal {
                         lloss += (-((label > 0) ? expTable.loss1[ind] : expTable.loss0[ind]));
                         llossn += 1;
                     }
-                    g = (float)((label - sigm) * opts.lr);
+                    g = (float)((label - sigm) * opts.lr * weight);
 
                     if (opts.lambda > 0) {
                         blas.saxpy(opts.dim, (float)(-opts.lambda * opts.lr), syn0, l1, 1, neu1e, 0, 1);
@@ -263,7 +267,7 @@ public class SkipGramLocal {
     }
 
     public void optimize(Iterator<LongPairMulti> data, int cpus) {
-        ParItr.foreach(data, t -> this.optimizeBatch(t.l, t.r), cpus);
+        ParItr.foreach(data, t -> this.optimizeBatch(t.l, t.r, null), cpus);
     }
 
     public Iterator<ItemData> flush() {
