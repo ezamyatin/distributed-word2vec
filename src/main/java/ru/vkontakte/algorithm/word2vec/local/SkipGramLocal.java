@@ -93,7 +93,7 @@ public class SkipGramLocal {
 
         while (a < table.length && i < n) {
             table[a] = indices == null ? i : indices[i];
-            if ((double)a / table.length > d1) {
+            if (a > d1 * table.length) {
                 i += 1;
                 d1 += Math.pow(cn[indices == null ? i : indices[i]], pow) / trainWordsPow;
             }
