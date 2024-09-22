@@ -51,8 +51,6 @@ class SkipGram extends Serializable with Logging {
     this
   }
 
-  def vectorSize: Int = if (!useBias) dotVectorSize else dotVectorSize + 1
-
   def setLearningRate(learningRate: Double): this.type = {
     require(learningRate > 0,
       s"Initial learning rate must be positive but got ${learningRate}")
