@@ -46,7 +46,7 @@ public class BatchedGenerator implements Serializable {
 
             @Override
             public boolean acceptPair(long[] sent, int i, int j, SamplingMode samplingMode) {
-                return p1.getInt(i) == p2.getInt(j) && PairGenerator.super.acceptPair(sent, i, j, samplingMode);
+                return p1.getInt(i) == p2.getInt(j) && pairGenerator.acceptPair(sent, i, j, samplingMode);
             }
         };
 
