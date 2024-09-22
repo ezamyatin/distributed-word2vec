@@ -285,5 +285,7 @@ public class SkipGramLocal {
                 }).iterator());
     }
 
+    public static void main(String[] args) {
 
+    }
 }

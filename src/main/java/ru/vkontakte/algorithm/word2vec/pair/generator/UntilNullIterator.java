@@ -1,5 +1,6 @@
 package ru.vkontakte.algorithm.word2vec.pair.generator;
 
+import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.Iterator;
 
@@ -21,5 +22,6 @@ public abstract class UntilNullIterator<T> implements Iterator<T>, Serializable 
         return result;
     }
 
+    @Nullable
     public abstract T generateOrNull();
 }
