@@ -146,7 +146,7 @@ public class SkipGramLocal {
             unigramTable = initUnigramTable(this.cnR, opts.pow,
                     vocabR.keySet().longStream()
                         .filter(e -> e < 0)
-                        .mapToInt(e -> vocabR.get(e)).toArray());
+                        .mapToInt(vocabR::get).toArray());
         } else if (opts.pow > 0) {
             unigramTable = initUnigramTable(this.cnR, opts.pow, null);
         } else {
