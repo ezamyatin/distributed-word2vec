@@ -268,7 +268,7 @@ class SkipGram extends Serializable with Logging {
           }, partitioner1, partitioner2)
 
           it.flatMap(it => pairGenerator.generate(it).asScala) ++ pairGenerator.flush().asScala
-        })
+        }).map(e => e.part -> e).partitionBy(partitionerKey).values
 
         val newEmb = (cur.zipPartitions(embLR) { case (sIt, eItLR) =>
 
