@@ -43,7 +43,7 @@ public class SampleGenerator implements PairGenerator {
 
         for (int i = 0; i < sent.length; ++i) {
             p1.add(partitioner1.getPartition(sent[i]));
-            p2.add(partitioner1.getPartition(sent[i]));
+            p2.add(partitioner2.getPartition(sent[i]));
         }
 
         return new UntilNullIterator<LongPair>() {
