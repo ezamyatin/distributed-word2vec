@@ -154,21 +154,24 @@ class SkipGram extends Serializable with Logging {
     r
   }
 
-  def checkpoint(emb: RDD[(ItemID, (Long, Array[Float], Array[Float]))],
-                 path: String)(implicit sc: SparkContext): RDD[(ItemID, (Long, Array[Float], Array[Float]))] = {
+  def checkpoint(emb: RDD[ItemData],
+                 path: String)(implicit sc: SparkContext): RDD[ItemData] = {
     val sqlc = new SQLContext(sc)
     import sqlc.implicits._
     if (emb != null) {
-      emb.toDF("user_id", "emb").write.mode(SaveMode.Overwrite).parquet(path)
+        emb.map(itemData => (itemData.`type`, itemData.id, itemData.cn, itemData.f))
+          .toDF("type", "id", "cn", "f")
+          .write.mode(SaveMode.Overwrite).parquet(path)
       emb.unpersist()
     }
+
     cacheAndCount(sqlc.read.parquet(path)
-      .as[(ItemID, (Long, Array[Float], Array[Float]))]
-      .rdd
+      .as[(Boolean, Long, Long, Array[Float])].rdd
+      .map(e => new ItemData(e._1, e._2, e._3, e._4))
     )
   }
 
-  def fit(dataset: RDD[Array[ItemID]]): RDD[(ItemID, (Long, Array[Float], Array[Float]))] = {
+  def fit(dataset: RDD[Array[ItemID]]): RDD[ItemData] = {
     assert(!((checkpointInterval > 0) ^ (checkpointPath != null)))
 
     val sc = dataset.context
@@ -189,7 +192,7 @@ class SkipGram extends Serializable with Logging {
     Try(hdfs.listStatus(new Path(path)).map(_.getPath.getName)).getOrElse(Array.empty)
   }
 
-  private def doFit(sent: RDD[Array[ItemID]]): RDD[(ItemID, (Long, Array[Float], Array[Float]))] = {
+  private def doFit(sent: RDD[Array[ItemID]]): RDD[ItemData] = {
     import SkipGram._
 
     val latest = if (checkpointPath != null) {
@@ -211,10 +214,10 @@ class SkipGram extends Serializable with Logging {
           .reduceByKey(_ + _).filter(_._2 >= minCount)
           .mapPartitions{it =>
             val rnd = new Random()
-            it.map{case (w, n) =>
+            it.flatMap {case (w, n) =>
               rnd.setSeed(w.hashCode)
-              w -> (n, SkipGramLocal.initEmbedding(dotVectorSize, useBias, rnd),
-                SkipGramLocal.initEmbedding(dotVectorSize, useBias, rnd))
+              Iterator(new ItemData(ItemData.TYPE_LEFT, w, n, SkipGramLocal.initEmbedding(dotVectorSize, useBias, rnd)),
+                new ItemData(ItemData.TYPE_RIGHT, w, n, SkipGramLocal.initEmbedding(dotVectorSize, useBias, rnd)))
             }
       })}
 
@@ -245,10 +248,7 @@ class SkipGram extends Serializable with Logging {
           override def getPartition(key: Any): Int = key.asInstanceOf[Int]
         }
 
-        val embLR = emb.flatMap{x =>
-          Iterator(partitioner1.getPartition(x._1) -> new ItemData(ItemData.TYPE_LEFT, x._1, x._2._1, x._2._2),
-            partitioner2.getPartition(x._1) -> new ItemData(ItemData.TYPE_RIGHT, x._1, x._2._1, x._2._3))
-        }.partitionBy(partitionerKey).values
+        val embLR = emb.keyBy(_.id).partitionBy(partitionerKey).values
 
         val cur = sent.mapPartitionsWithIndex({case (idx, it) =>
           val seed = (1L * curEpoch * numPartitions + pI) * numPartitions + idx
@@ -270,8 +270,7 @@ class SkipGram extends Serializable with Logging {
           it.flatMap(it => pairGenerator.generate(it).asScala) ++ pairGenerator.flush().asScala
         }).map(e => e.part -> e).partitionBy(partitionerKey).values
 
-        val newEmb = (cur.zipPartitions(embLR) { case (sIt, eItLR) =>
-
+        emb = (cur.zipPartitions(embLR) { case (sIt, eItLR) =>
           val sg = new SkipGramLocal(new SkipGramOpts(dotVectorSize, useBias, negative, window,
             pow, curLearningRate, lambda, samplingMode), eItLR.asJava)
 
@@ -279,18 +278,9 @@ class SkipGram extends Serializable with Logging {
 
           println("LOSS: " + sg.loss.doubleValue() / sg.lossn.longValue() + " (" + sg.loss.doubleValue() + " / " + sg.lossn.longValue() + ")")
 
-          sg.flush().asScala.map{itemData =>
-            if (itemData.`type` == ItemData.TYPE_LEFT) {
-              itemData.id -> (itemData.cn, itemData.f, null.asInstanceOf[Array[Float]])
-            } else {
-              itemData.id -> (itemData.cn, null.asInstanceOf[Array[Float]], itemData.f)
-            }
-          }
-        })
+          sg.flush().asScala
+        }).persist(intermediateRDDStorageLevel)
 
-        emb = newEmb
-          .reduceByKey{case (x, y) => (x._1 + y._1, if (x._2 != null) x._2 else y._2, if (x._3 == null) y._3 else x._3)}
-          .persist(intermediateRDDStorageLevel)
         cached += emb
 
         if (checkpointInterval > 0 && (checkpointIter + 1) % checkpointInterval == 0) {
