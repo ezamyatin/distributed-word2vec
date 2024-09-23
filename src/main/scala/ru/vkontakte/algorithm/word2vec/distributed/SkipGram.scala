@@ -248,7 +248,9 @@ class SkipGram extends Serializable with Logging {
           override def getPartition(key: Any): Int = key.asInstanceOf[Int]
         }
 
-        val embLR = emb.keyBy(_.id).partitionBy(partitionerKey).values
+        val embLR = emb
+          .keyBy(i => if (i.`type` == ItemData.TYPE_LEFT) partitioner1.getPartition(i.id) else partitioner2.getPartition(i.id))
+          .partitionBy(partitionerKey).values
 
         val cur = sent.mapPartitionsWithIndex({case (idx, it) =>
           val seed = (1L * curEpoch * numPartitions + pI) * numPartitions + idx
