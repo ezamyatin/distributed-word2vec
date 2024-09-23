@@ -8,7 +8,7 @@ import java.util.Iterator;
  * @author zamyatin-evg
  **/
 public abstract class UntilNullIterator<T> implements Iterator<T>, Serializable {
-    T next = null;
+    private T next = null;
 
     @Override
     public boolean hasNext() {
