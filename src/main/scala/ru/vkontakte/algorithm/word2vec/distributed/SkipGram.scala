@@ -255,9 +255,9 @@ class SkipGram extends Serializable with Logging {
 
           val pairGenerator = new BatchedGenerator({
             if (samplingMode == SamplingMode.SAMPLE) {
-              new SampleGenerator(window, samplingMode, seed)
+              new SampleGenerator(window, samplingMode, partitioner1, partitioner2, seed)
             } else if (samplingMode == SamplingMode.SAMPLE_POS2NEG) {
-              new Pos2NegPairGenerator(window, samplingMode, seed)
+              new Pos2NegPairGenerator(window, samplingMode, partitioner1, partitioner2, seed)
             } else if (samplingMode == SamplingMode.WINDOW) {
               assert(false)
               null
@@ -265,7 +265,7 @@ class SkipGram extends Serializable with Logging {
               assert(false)
               null
             }
-          }, partitioner1, partitioner2)
+          })
 
           it.flatMap(it => pairGenerator.generate(it).asScala) ++ pairGenerator.flush().asScala
         }).map(e => e.part -> e).partitionBy(partitionerKey).values

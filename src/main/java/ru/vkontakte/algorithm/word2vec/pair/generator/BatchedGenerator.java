@@ -21,42 +21,16 @@ public class BatchedGenerator implements Serializable {
     private final int batchSize;
 
     private final LongArrayList[] l, r;
-    private final SkipGramPartitioner partitioner1;
-    private final SkipGramPartitioner partitioner2;
 
-    public BatchedGenerator(PairGenerator pairGenerator,
-                            SkipGramPartitioner partitioner1,
-                            SkipGramPartitioner partitioner2) {
-        this.partitioner1 = partitioner1;
-        this.partitioner2 = partitioner2;
-        this.pairGenerator = new PairGenerator() {
-            private IntArrayList p1 = new IntArrayList(1000);
-            private IntArrayList p2 = new IntArrayList(1000);
+    public BatchedGenerator(PairGenerator pairGenerator) {
+        this.pairGenerator = pairGenerator;
+        assert pairGenerator.partitioner1().getNumPartitions() == pairGenerator.partitioner2().getNumPartitions();
 
-            @Override
-            public Iterator<LongPair> generate(long[] sent) {
-                p1.clear();
-                p2.clear();
-                for (long s : sent) {
-                    p1.add(partitioner1.getPartition(s));
-                    p2.add(partitioner2.getPartition(s));
-                }
-                return pairGenerator.generate(sent);
-            }
+        l = new LongArrayList[pairGenerator.partitioner1().getNumPartitions()];
+        r = new LongArrayList[pairGenerator.partitioner1().getNumPartitions()];
 
-            @Override
-            public boolean acceptPair(long[] sent, int i, int j, SamplingMode samplingMode) {
-                return p1.getInt(i) == p2.getInt(j) && pairGenerator.acceptPair(sent, i, j, samplingMode);
-            }
-        };
-
-        assert partitioner1.getNumPartitions() == partitioner2.getNumPartitions();
-
-        l = new LongArrayList[partitioner1.getNumPartitions()];
-        r = new LongArrayList[partitioner1.getNumPartitions()];
-
-        this.batchSize = TOTAL_BATCH_SIZE / partitioner1.getNumPartitions();
-        for (int i = 0; i < partitioner1.getNumPartitions(); ++i) {
+        this.batchSize = TOTAL_BATCH_SIZE / pairGenerator.partitioner1().getNumPartitions();
+        for (int i = 0; i < pairGenerator.partitioner1().getNumPartitions(); ++i) {
             l[i] = new LongArrayList(batchSize);
             r[i] = new LongArrayList(batchSize);
         }
@@ -73,7 +47,7 @@ public class BatchedGenerator implements Serializable {
             public LongPairMulti generateOrNull() {
                 while (it.hasNext() && filled == -1) {
                     LongPair pair = it.next();
-                    int part = partitioner1.getPartition(pair.left);
+                    int part = pair.part;
                     l[part].add(pair.left);
                     r[part].add(pair.right);
 

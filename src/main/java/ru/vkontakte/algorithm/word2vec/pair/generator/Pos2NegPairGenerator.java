@@ -4,6 +4,7 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import ru.vkontakte.algorithm.word2vec.SkipGramUtil;
 import ru.vkontakte.algorithm.word2vec.pair.LongPair;
 import ru.vkontakte.algorithm.word2vec.pair.SamplingMode;
+import ru.vkontakte.algorithm.word2vec.pair.SkipGramPartitioner;
 
 import java.util.Iterator;
 import java.util.Random;
@@ -14,31 +15,47 @@ import java.util.Random;
 public class Pos2NegPairGenerator implements PairGenerator {
     private final int window;
     private final SamplingMode samplingMode;
+    private final SkipGramPartitioner partitioner1;
+    private final SkipGramPartitioner partitioner2;
     private final Random random;
 
     private final IntArrayList sentL, sentR;
+    private final IntArrayList p1, p2;
 
     public Pos2NegPairGenerator(int window,
                                 SamplingMode samplingMode,
+                                SkipGramPartitioner partitioner1,
+                                SkipGramPartitioner partitioner2,
                                 long seed) {
+        assert partitioner1.getNumPartitions() == partitioner2.getNumPartitions();
+
         this.window = window;
         this.samplingMode = samplingMode;
+        this.partitioner1 = partitioner1;
+        this.partitioner2 = partitioner2;
         this.random = new Random(seed);
 
         this.sentL = new IntArrayList(1000);
         this.sentR = new IntArrayList(1000);
+
+        this.p1 = new IntArrayList(1000);
+        this.p2 = new IntArrayList(1000);
     }
 
     public Iterator<LongPair> generate(long[] sent) {
 
         sentL.clear();
         sentR.clear();
+        p1.clear();
+        p2.clear();
 
         for (int i = 0; i < sent.length; ++i) {
             if (sent[i] > 0) {
                 sentL.add(i);
+                p1.add(partitioner1.getPartition(sent[i]));
             } else {
                 sentR.add(i);
+                p2.add(partitioner2.getPartition(sent[i]));
             }
         }
 
@@ -55,8 +72,8 @@ public class Pos2NegPairGenerator implements PairGenerator {
                         int c = random.nextInt(sentR.size());;
 
                         j += 1;
-                        if (acceptPair(sent, sentL.getInt(i), sentR.getInt(c), samplingMode)) {
-                            return new LongPair(sent[sentL.getInt(i)], sent[sentR.getInt(c)]);
+                        if (p1.getInt(i) == p2.getInt(c) && sent[sentL.getInt(i)] != sent[sentR.getInt(c)]) {
+                            return new LongPair(p1.getInt(i), sent[sentL.getInt(i)], sent[sentR.getInt(c)]);
                         }
                     }
 
@@ -66,5 +83,15 @@ public class Pos2NegPairGenerator implements PairGenerator {
                 return null;
             }
         };
+    }
+
+    @Override
+    public SkipGramPartitioner partitioner1() {
+        return partitioner1;
+    }
+
+    @Override
+    public SkipGramPartitioner partitioner2() {
+        return partitioner2;
     }
 }
