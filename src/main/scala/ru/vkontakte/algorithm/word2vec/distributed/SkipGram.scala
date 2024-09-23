@@ -223,7 +223,7 @@ class SkipGram extends Serializable with Logging {
 
     var checkpointIter = 0
     val (startEpoch, startIter) = latest.getOrElse((0, 0))
-    val cached = ArrayBuffer.empty[RDD[(ItemID, (Long, Array[Float], Array[Float]))]]
+    val cached = ArrayBuffer.empty[RDD[ItemData]]
     val partitionTable = sent.sparkContext.broadcast(SkipGramPartitioner.createPartitionTable(numPartitions, new Random(0)))
 
     (startEpoch until numIterations).foreach {curEpoch =>
