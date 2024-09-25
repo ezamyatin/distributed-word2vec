@@ -169,7 +169,7 @@ public class SkipGramLocal {
         return f;
     }
 
-    public void optimizeBatch(long[] l, long[] r, @Nullable float[] w) {
+    private void optimizeBatchRemapped(long[] l, long[] r, @Nullable float[] w) {
         assert l.length == r.length;
         SkipGramUtil.shuffle(l, r, random);
 
@@ -182,8 +182,8 @@ public class SkipGramLocal {
         ExpTable expTable = ExpTable.getInstance();
 
         while (pos < l.length) {
-            lastWord = vocabL.getOrDefault(l[pos], -1);
-            word = vocabR.getOrDefault(r[pos], -1);
+            lastWord = (int)l[pos];
+            word = (int)r[pos];
 
             if (word != -1 && lastWord != -1) {
                 int l1 = lastWord * opts.vectorSize();
@@ -266,7 +266,17 @@ public class SkipGramLocal {
     }
 
     public void optimize(Iterator<LongPairMulti> data, int cpus) {
-        ParItr.foreach(data, t -> this.optimizeBatch(t.l, t.r, null), cpus);
+        ParItr.foreach(new Iterator<LongPairMulti>() {
+            @Override
+            public boolean hasNext() {
+                return data.hasNext();
+            }
+
+            @Override
+            public LongPairMulti next() {
+                return data.next().remap(vocabL, vocabR);
+            }
+        }, t -> this.optimizeBatchRemapped(t.l, t.r, null), cpus);
     }
 
     public Iterator<ItemData> flush() {
