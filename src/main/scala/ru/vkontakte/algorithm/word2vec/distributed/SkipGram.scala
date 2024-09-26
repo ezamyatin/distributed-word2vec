@@ -171,7 +171,7 @@ class SkipGram extends Serializable with Logging {
     )
   }
 
-  def fit(dataset: RDD[Array[ItemID]]): RDD[ItemData] = {
+  def fitW2V(dataset: RDD[Array[ItemID]]): RDD[ItemData] = {
     assert(!((checkpointInterval > 0) ^ (checkpointPath != null)))
 
     val sc = dataset.context
@@ -182,6 +182,22 @@ class SkipGram extends Serializable with Logging {
 
     try {
       doFit(Left(sent))
+    } finally {
+      sent.unpersist()
+    }
+  }
+
+  def fitLMF(dataset: RDD[(Long, ItemID, Float)]): RDD[ItemData] = {
+    assert(!((checkpointInterval > 0) ^ (checkpointPath != null)))
+
+    val sc = dataset.context
+
+    val numExecutors = sc.getConf.get("spark.executor.instances").toInt
+    val numCores = sc.getConf.get("spark.executor.cores").toInt
+    val sent = cacheAndCount(dataset.repartition(numExecutors * numCores / numThread))
+
+    try {
+      doFit(Right(sent))
     } finally {
       sent.unpersist()
     }
