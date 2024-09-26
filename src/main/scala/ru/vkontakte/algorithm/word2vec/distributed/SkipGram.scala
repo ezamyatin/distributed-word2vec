@@ -192,6 +192,29 @@ class SkipGram extends Serializable with Logging {
     Try(hdfs.listStatus(new Path(path)).map(_.getPath.getName)).getOrElse(Array.empty)
   }
 
+  private def pairs(sent: RDD[Array[ItemID]],
+                    curEpoch: Int, pI: Int,
+                    partitioner1: SkipGramPartitioner,
+                    partitioner2: SkipGramPartitioner): RDD[LongPairMulti] = {
+    sent.mapPartitionsWithIndex({case (idx, it) =>
+      val seed = (1L * curEpoch * numPartitions + pI) * numPartitions + idx
+      val pairGenerator = new BatchedGenerator({
+        if (samplingMode == SamplingMode.SAMPLE) {
+          new SampleGenerator(window, samplingMode, partitioner1, partitioner2, seed)
+        } else if (samplingMode == SamplingMode.SAMPLE_POS2NEG) {
+          new Pos2NegPairGenerator(window, samplingMode, partitioner1, partitioner2, seed)
+        } else if (samplingMode == SamplingMode.WINDOW) {
+          assert(false)
+          null
+        } else {
+          assert(false)
+          null
+        }
+      })
+      it.flatMap(it => pairGenerator.generate(it).asScala) ++ pairGenerator.flush().asScala
+    })
+  }
+
   private def doFit(sent: RDD[Array[ItemID]]): RDD[ItemData] = {
     import SkipGram._
 
@@ -252,25 +275,8 @@ class SkipGram extends Serializable with Logging {
           .keyBy(i => if (i.`type` == ItemData.TYPE_LEFT) partitioner1.getPartition(i.id) else partitioner2.getPartition(i.id))
           .partitionBy(partitionerKey).values
 
-        val cur = sent.mapPartitionsWithIndex({case (idx, it) =>
-          val seed = (1L * curEpoch * numPartitions + pI) * numPartitions + idx
-
-          val pairGenerator = new BatchedGenerator({
-            if (samplingMode == SamplingMode.SAMPLE) {
-              new SampleGenerator(window, samplingMode, partitioner1, partitioner2, seed)
-            } else if (samplingMode == SamplingMode.SAMPLE_POS2NEG) {
-              new Pos2NegPairGenerator(window, samplingMode, partitioner1, partitioner2, seed)
-            } else if (samplingMode == SamplingMode.WINDOW) {
-              assert(false)
-              null
-            } else {
-              assert(false)
-              null
-            }
-          })
-
-          it.flatMap(it => pairGenerator.generate(it).asScala) ++ pairGenerator.flush().asScala
-        }).map(e => e.part -> e).partitionBy(partitionerKey).values
+        val cur = pairs(sent, curEpoch, pI, partitioner1, partitioner2)
+          .map(e => e.part -> e).partitionBy(partitionerKey).values
 
         emb = (cur.zipPartitions(embLR) { case (sIt, eItLR) =>
           val sg = new SkipGramLocal(new SkipGramOpts(dotVectorSize, useBias, negative, window,
