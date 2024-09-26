@@ -278,7 +278,7 @@ class SkipGram extends Serializable with Logging {
         val cur = pairs(sent, curEpoch, pI, partitioner1, partitioner2)
           .map(e => e.part -> e).partitionBy(partitionerKey).values
 
-        emb = (cur.zipPartitions(embLR) { case (sIt, eItLR) =>
+        emb = cur.zipPartitions(embLR) { case (sIt, eItLR) =>
           val sg = new SkipGramLocal(new SkipGramOpts(dotVectorSize, useBias, negative, window,
             pow, curLearningRate, lambda, samplingMode), eItLR.asJava)
 
@@ -287,7 +287,7 @@ class SkipGram extends Serializable with Logging {
           println("LOSS: " + sg.loss.doubleValue() / sg.lossn.longValue() + " (" + sg.loss.doubleValue() + " / " + sg.lossn.longValue() + ")")
 
           sg.flush().asScala
-        }).persist(intermediateRDDStorageLevel)
+        }.persist(intermediateRDDStorageLevel)
 
         cached += emb
 
