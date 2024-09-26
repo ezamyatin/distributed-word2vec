@@ -41,7 +41,7 @@ public abstract class PairGenerator extends UntilNullIterator<LongPair> implemen
     }
 
     public LongPair generateOrNull() {
-        if (!it.hasNext() && sent.hasNext()) {
+        while (!it.hasNext() && sent.hasNext()) {
             it = generate(sent.next());
         }
         if (it.hasNext()) {
