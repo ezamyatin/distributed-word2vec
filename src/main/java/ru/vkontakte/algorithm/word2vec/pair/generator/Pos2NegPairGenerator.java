@@ -12,7 +12,7 @@ import java.util.Random;
 /**
  * @author ezamyatin
  **/
-public class Pos2NegPairGenerator implements PairGenerator {
+public class Pos2NegPairGenerator extends PairGenerator {
     private final int window;
     private final SamplingMode samplingMode;
     private final SkipGramPartitioner partitioner1;
@@ -22,12 +22,13 @@ public class Pos2NegPairGenerator implements PairGenerator {
     private final IntArrayList sentL, sentR;
     private final IntArrayList p1, p2;
 
-    public Pos2NegPairGenerator(int window,
+    public Pos2NegPairGenerator(Iterator<long[]> sent,
+                                int window,
                                 SamplingMode samplingMode,
                                 SkipGramPartitioner partitioner1,
                                 SkipGramPartitioner partitioner2,
                                 long seed) {
-        assert partitioner1.getNumPartitions() == partitioner2.getNumPartitions();
+        super(sent, partitioner1, partitioner2);
 
         this.window = window;
         this.samplingMode = samplingMode;
@@ -42,7 +43,7 @@ public class Pos2NegPairGenerator implements PairGenerator {
         this.p2 = new IntArrayList(1000);
     }
 
-    public Iterator<LongPair> generate(long[] sent) {
+    protected Iterator<LongPair> generate(long[] sent) {
 
         sentL.clear();
         sentR.clear();
@@ -83,15 +84,5 @@ public class Pos2NegPairGenerator implements PairGenerator {
                 return null;
             }
         };
-    }
-
-    @Override
-    public SkipGramPartitioner partitioner1() {
-        return partitioner1;
-    }
-
-    @Override
-    public SkipGramPartitioner partitioner2() {
-        return partitioner2;
     }
 }

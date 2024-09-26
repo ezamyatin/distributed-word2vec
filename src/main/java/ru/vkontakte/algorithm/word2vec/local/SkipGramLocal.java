@@ -9,7 +9,6 @@ import it.unimi.dsi.fastutil.longs.LongArrayList;
 import ru.vkontakte.algorithm.word2vec.SkipGramUtil;
 import ru.vkontakte.algorithm.word2vec.pair.LongPairMulti;
 import ru.vkontakte.algorithm.word2vec.pair.SamplingMode;
-import ru.vkontakte.algorithm.word2vec.pair.generator.PairGenerator;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -276,7 +275,7 @@ public class SkipGramLocal {
             public LongPairMulti next() {
                 return data.next().remap(vocabL, vocabR);
             }
-        }, t -> this.optimizeBatchRemapped(t.l, t.r, null), cpus);
+        }, t -> this.optimizeBatchRemapped(t.left, t.right, t.rating), cpus);
     }
 
     public Iterator<ItemData> flush() {

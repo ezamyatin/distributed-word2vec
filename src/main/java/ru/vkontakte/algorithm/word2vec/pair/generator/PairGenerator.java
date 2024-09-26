@@ -1,6 +1,8 @@
 package ru.vkontakte.algorithm.word2vec.pair.generator;
 
+import com.google.common.collect.Iterators;
 import ru.vkontakte.algorithm.word2vec.pair.LongPair;
+import ru.vkontakte.algorithm.word2vec.pair.LongPairMulti;
 import ru.vkontakte.algorithm.word2vec.pair.SamplingMode;
 import ru.vkontakte.algorithm.word2vec.pair.SkipGramPartitioner;
 
@@ -11,10 +13,40 @@ import java.util.Iterator;
  * @author ezamyatin
  **/
 
-public interface PairGenerator extends Serializable {
+public abstract class PairGenerator extends UntilNullIterator<LongPair> implements Serializable {
 
-    Iterator<LongPair> generate(long[] sent);
+    private final Iterator<long[]> sent;
+    private final SkipGramPartitioner partitioner1;
+    private final SkipGramPartitioner partitioner2;
 
-    SkipGramPartitioner partitioner1();
-    SkipGramPartitioner partitioner2();
+    private Iterator<LongPair> it = Iterators.emptyIterator();
+
+    protected abstract Iterator<LongPair> generate(long[] sent);
+
+    public SkipGramPartitioner partitioner1() {
+        return partitioner1;
+    }
+
+    public SkipGramPartitioner partitioner2(){
+        return partitioner2;
+    }
+
+    public PairGenerator(Iterator<long[]> sent,
+                         SkipGramPartitioner partitioner1,
+                         SkipGramPartitioner partitioner2) {
+        assert partitioner1.getNumPartitions() == partitioner2.getNumPartitions();
+        this.sent = sent;
+        this.partitioner1 = partitioner1;
+        this.partitioner2 = partitioner2;
+    }
+
+    public LongPair generateOrNull() {
+        if (!it.hasNext() && sent.hasNext()) {
+            it = generate(sent.next());
+        }
+        if (it.hasNext()) {
+            return it.next();
+        }
+        return null;
+    }
 }

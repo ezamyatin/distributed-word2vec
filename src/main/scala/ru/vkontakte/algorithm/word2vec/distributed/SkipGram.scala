@@ -9,7 +9,7 @@ import ru.vkontakte.algorithm.word2vec.distributed.SkipGram.ItemID
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import ru.vkontakte.algorithm.word2vec.local.{ItemData, ParItr, SkipGramLocal, SkipGramOpts}
-import ru.vkontakte.algorithm.word2vec.pair.{LongPairMulti, SamplingMode, SkipGramPartitioner}
+import ru.vkontakte.algorithm.word2vec.pair.{LongPair, LongPairMulti, SamplingMode, SkipGramPartitioner}
 import ru.vkontakte.algorithm.word2vec.pair.generator.{BatchedGenerator, Pos2NegPairGenerator, SampleGenerator}
 
 import java.util.Random
@@ -181,7 +181,7 @@ class SkipGram extends Serializable with Logging {
     val sent = cacheAndCount(dataset.repartition(numExecutors * numCores / numThread))
 
     try {
-      doFit(sent)
+      doFit(Left(sent))
     } finally {
       sent.unpersist()
     }
@@ -192,31 +192,35 @@ class SkipGram extends Serializable with Logging {
     Try(hdfs.listStatus(new Path(path)).map(_.getPath.getName)).getOrElse(Array.empty)
   }
 
-  private def pairs(sent: RDD[Array[ItemID]],
+  private def pairs(sent: Either[RDD[Array[ItemID]], RDD[(Long, ItemID, Float)]],
                     curEpoch: Int, pI: Int,
                     partitioner1: SkipGramPartitioner,
                     partitioner2: SkipGramPartitioner): RDD[LongPairMulti] = {
-    sent.mapPartitionsWithIndex({case (idx, it) =>
-      val seed = (1L * curEpoch * numPartitions + pI) * numPartitions + idx
-      val pairGenerator = new BatchedGenerator({
-        if (samplingMode == SamplingMode.SAMPLE) {
-          new SampleGenerator(window, samplingMode, partitioner1, partitioner2, seed)
-        } else if (samplingMode == SamplingMode.SAMPLE_POS2NEG) {
-          new Pos2NegPairGenerator(window, samplingMode, partitioner1, partitioner2, seed)
-        } else if (samplingMode == SamplingMode.WINDOW) {
-          assert(false)
-          null
-        } else {
-          assert(false)
-          null
-        }
+    sent.fold ({_.mapPartitionsWithIndex({ case (idx, it) =>
+        val seed = (1L * curEpoch * numPartitions + pI) * numPartitions + idx
+        new BatchedGenerator({
+          if (samplingMode == SamplingMode.SAMPLE) {
+            new SampleGenerator(it.asJava, window, samplingMode, partitioner1, partitioner2, seed)
+          } else if (samplingMode == SamplingMode.SAMPLE_POS2NEG) {
+            new Pos2NegPairGenerator(it.asJava, window, samplingMode, partitioner1, partitioner2, seed)
+          } else if (samplingMode == SamplingMode.WINDOW) {
+            assert(false)
+            null
+          } else {
+            assert(false)
+            null
+          }
+        }, partitioner1.getNumPartitions, false).asScala
       })
-      it.flatMap(it => pairGenerator.generate(it).asScala) ++ pairGenerator.flush().asScala
-    })
+    }, _.mapPartitions(it => new BatchedGenerator(it
+      .filter(e => partitioner1.getPartition(e._1) == partitioner2.getPartition(e._2))
+      .map(e => new LongPair(partitioner1.getPartition(e._1), e._1, e._2, e._3))
+      .asJava, partitioner1.getNumPartitions, true).asScala))
   }
 
-  private def doFit(sent: RDD[Array[ItemID]]): RDD[ItemData] = {
+  private def doFit(sent: Either[RDD[Array[ItemID]], RDD[(Long, ItemID, Float)]]): RDD[ItemData] = {
     import SkipGram._
+    val sparkContext = sent.fold(_.sparkContext, _.sparkContext)
 
     val latest = if (checkpointPath != null) {
       listFiles(checkpointPath)
@@ -230,10 +234,9 @@ class SkipGram extends Serializable with Logging {
 
     latest.foreach(x => println(s"Continue training from epoch = ${x._1}, iteration = ${x._2}"))
 
-    var emb = latest.map(x => checkpoint(null, checkpointPath + "/" + x._1 + "_" + x._2)(sent.sparkContext))
+    var emb = latest.map(x => checkpoint(null, checkpointPath + "/" + x._1 + "_" + x._2)(sparkContext))
       .getOrElse{cacheAndCount(
-        sent
-          .flatMap(identity(_)).map(_ -> 1L)
+        sent.fold(_.flatMap(identity(_)).map(_ -> 1L)
           .reduceByKey(_ + _).filter(_._2 >= minCount)
           .mapPartitions{it =>
             val rnd = new Random()
@@ -242,12 +245,21 @@ class SkipGram extends Serializable with Logging {
               Iterator(new ItemData(ItemData.TYPE_LEFT, w, n, SkipGramLocal.initEmbedding(dotVectorSize, useBias, rnd)),
                 new ItemData(ItemData.TYPE_RIGHT, w, n, SkipGramLocal.initEmbedding(dotVectorSize, useBias, rnd)))
             }
-      })}
+      }, _.flatMap(e => Seq((ItemData.TYPE_LEFT, e._1) -> 1, (ItemData.TYPE_RIGHT, e._2) -> 1))
+          .reduceByKey(_ + _).filter(_._2 >= minCount)
+          .mapPartitions { it =>
+            val rnd = new Random()
+            it.map { case ((t, w), n) =>
+              rnd.setSeed(w.hashCode)
+              new ItemData(t, w, n, SkipGramLocal.initEmbedding(dotVectorSize, useBias, rnd))
+            }
+          }
+      ))}
 
     var checkpointIter = 0
     val (startEpoch, startIter) = latest.getOrElse((0, 0))
     val cached = ArrayBuffer.empty[RDD[ItemData]]
-    val partitionTable = sent.sparkContext.broadcast(SkipGramPartitioner.createPartitionTable(numPartitions, new Random(0)))
+    val partitionTable = sparkContext.broadcast(SkipGramPartitioner.createPartitionTable(numPartitions, new Random(0)))
 
     (startEpoch until numIterations).foreach {curEpoch =>
 
@@ -292,7 +304,7 @@ class SkipGram extends Serializable with Logging {
         cached += emb
 
         if (checkpointInterval > 0 && (checkpointIter + 1) % checkpointInterval == 0) {
-          emb = checkpoint(emb, checkpointPath + "/" + curEpoch + "_" + (pI + 1))(sent.sparkContext)
+          emb = checkpoint(emb, checkpointPath + "/" + curEpoch + "_" + (pI + 1))(sparkContext)
           cached.foreach(_.unpersist())
           cached.clear()
         }
