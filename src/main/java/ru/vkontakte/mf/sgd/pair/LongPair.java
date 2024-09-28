@@ -1,4 +1,4 @@
-package ru.vkontakte.algorithm.word2vec.pair;
+package ru.vkontakte.mf.sgd.pair;
 
 import java.io.Serializable;
 

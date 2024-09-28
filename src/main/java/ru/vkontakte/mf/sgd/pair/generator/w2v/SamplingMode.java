@@ -1,4 +1,4 @@
-package ru.vkontakte.algorithm.word2vec.pair.generator.w2v;
+package ru.vkontakte.mf.sgd.pair.generator.w2v;
 
 /**
  * @author ezamyatin

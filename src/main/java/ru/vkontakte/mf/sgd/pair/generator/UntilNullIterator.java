@@ -1,4 +1,4 @@
-package ru.vkontakte.algorithm.word2vec.pair.generator;
+package ru.vkontakte.mf.sgd.pair.generator;
 
 import javax.annotation.Nullable;
 import java.io.Serializable;

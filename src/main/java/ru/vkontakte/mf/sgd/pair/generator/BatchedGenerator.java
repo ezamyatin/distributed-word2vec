@@ -1,9 +1,9 @@
-package ru.vkontakte.algorithm.word2vec.pair.generator;
+package ru.vkontakte.mf.sgd.pair.generator;
 
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
-import ru.vkontakte.algorithm.word2vec.pair.LongPair;
-import ru.vkontakte.algorithm.word2vec.pair.LongPairMulti;
+import ru.vkontakte.mf.sgd.pair.LongPair;
+import ru.vkontakte.mf.sgd.pair.LongPairMulti;
 
 import java.io.Serializable;
 import java.util.Iterator;

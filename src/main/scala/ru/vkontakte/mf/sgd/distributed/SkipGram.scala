@@ -1,17 +1,17 @@
-package ru.vkontakte.algorithm.word2vec.distributed
+package ru.vkontakte.mf.sgd.distributed
 
 import org.apache.spark.{HashPartitioner, SparkContext}
 import org.apache.spark.internal.Logging
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{SQLContext, SaveMode}
 import org.apache.spark.storage.StorageLevel
-import ru.vkontakte.algorithm.word2vec.distributed.SkipGram.ItemID
+import SkipGram.ItemID
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
-import ru.vkontakte.algorithm.word2vec.local.{ItemData, ParItr, SkipGramLocal, SkipGramOpts}
-import ru.vkontakte.algorithm.word2vec.pair.generator.w2v.{Pos2NegPairGenerator, SampleGenerator, SamplingMode}
-import ru.vkontakte.algorithm.word2vec.pair.{LongPair, LongPairMulti, SkipGramPartitioner}
-import ru.vkontakte.algorithm.word2vec.pair.generator.BatchedGenerator
+import ru.vkontakte.mf.sgd.local.{ItemData, ParItr, SkipGramLocal, SkipGramOpts}
+import ru.vkontakte.mf.sgd.pair.{LongPair, LongPairMulti, SkipGramPartitioner}
+import ru.vkontakte.mf.sgd.pair.generator.BatchedGenerator
+import ru.vkontakte.mf.sgd.pair.generator.w2v.{Pos2NegPairGenerator, SampleGenerator, SamplingMode}
 
 import java.util.Random
 import java.util.function.Consumer

@@ -1,7 +1,5 @@
-package ru.vkontakte.algorithm.word2vec.local;
+package ru.vkontakte.mf.sgd.local;
 
-
-import ru.vkontakte.algorithm.word2vec.pair.generator.w2v.SamplingMode;
 
 import java.io.Serializable;
 

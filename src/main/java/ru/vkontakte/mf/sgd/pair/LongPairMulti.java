@@ -1,4 +1,4 @@
-package ru.vkontakte.algorithm.word2vec.pair;
+package ru.vkontakte.mf.sgd.pair;
 
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 

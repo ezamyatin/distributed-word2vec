@@ -1,4 +1,4 @@
-package ru.vkontakte.algorithm.word2vec.local;
+package ru.vkontakte.mf.sgd.local;
 
 import java.util.Arrays;
 import java.util.Iterator;
