@@ -11,7 +11,6 @@ import ru.vkontakte.mf.local.{ItemData, Optimizer, Opts}
 import ru.vkontakte.mf.pair.generator.BatchedGenerator
 import ru.vkontakte.mf.pair.{LongPair, LongPairMulti, Partitioner}
 import ru.vkontakte.mf.pair.generator.w2v.{Pos2NegPairGenerator, SampleGenerator, SamplingMode}
-import ru.vkontakte.mf.sgd.local.{ItemData, Optimizer, Opts, ParItr}
 
 import java.util.Random
 import scala.collection.mutable.ArrayBuffer
