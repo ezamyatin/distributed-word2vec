@@ -5,7 +5,6 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{SQLContext, SaveMode}
 import org.apache.spark.storage.StorageLevel
-import SkipGram.ItemID
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import ru.vkontakte.mf.sgd.local.{ItemData, ParItr, Optimizer, Opts}
@@ -14,14 +13,9 @@ import ru.vkontakte.mf.sgd.pair.generator.BatchedGenerator
 import ru.vkontakte.mf.sgd.pair.generator.w2v.{Pos2NegPairGenerator, SampleGenerator, SamplingMode}
 
 import java.util.Random
-import java.util.function.Consumer
 import scala.collection.mutable.ArrayBuffer
 import scala.jdk.CollectionConverters.{asJavaIteratorConverter, asScalaIteratorConverter}
 import scala.util.Try
-
-object SkipGram {
-  type ItemID = Long
-}
 
 /**
  * @author ezamyatin
@@ -172,7 +166,7 @@ class SkipGram extends Serializable with Logging {
     )
   }
 
-  def fitW2V(dataset: RDD[Array[ItemID]]): RDD[ItemData] = {
+  def fitW2V(dataset: RDD[Array[Long]]): RDD[ItemData] = {
     assert(!((checkpointInterval > 0) ^ (checkpointPath != null)))
 
     val sc = dataset.context
@@ -188,7 +182,7 @@ class SkipGram extends Serializable with Logging {
     }
   }
 
-  def fitLMF(dataset: RDD[(Long, ItemID, Float)]): RDD[ItemData] = {
+  def fitLMF(dataset: RDD[(Long, Long, Float)]): RDD[ItemData] = {
     assert(!((checkpointInterval > 0) ^ (checkpointPath != null)))
 
     val sc = dataset.context
@@ -209,7 +203,7 @@ class SkipGram extends Serializable with Logging {
     Try(hdfs.listStatus(new Path(path)).map(_.getPath.getName)).getOrElse(Array.empty)
   }
 
-  private def pairs(sent: Either[RDD[Array[ItemID]], RDD[(Long, ItemID, Float)]],
+  private def pairs(sent: Either[RDD[Array[Long]], RDD[(Long, Long, Float)]],
                     curEpoch: Int, pI: Int,
                     partitioner1: SkipGramPartitioner,
                     partitioner2: SkipGramPartitioner): RDD[LongPairMulti] = {
@@ -235,8 +229,7 @@ class SkipGram extends Serializable with Logging {
       .asJava, partitioner1.getNumPartitions, true).asScala))
   }
 
-  private def doFit(sent: Either[RDD[Array[ItemID]], RDD[(Long, ItemID, Float)]]): RDD[ItemData] = {
-    import SkipGram._
+  private def doFit(sent: Either[RDD[Array[Long]], RDD[(Long, Long, Float)]]): RDD[ItemData] = {
     val sparkContext = sent.fold(_.sparkContext, _.sparkContext)
 
     val latest = if (checkpointPath != null) {
@@ -285,7 +278,7 @@ class SkipGram extends Serializable with Logging {
     (startEpoch until numIterations).foreach {curEpoch =>
 
       val partitioner1 = new SkipGramPartitioner {
-        override def getPartition(item: ItemID): Int = SkipGramPartitioner.hash(item, curEpoch, numPartitions)
+        override def getPartition(item: Long): Int = SkipGramPartitioner.hash(item, curEpoch, numPartitions)
         override def getNumPartitions: Int = numPartitions
       }
 
@@ -293,7 +286,7 @@ class SkipGram extends Serializable with Logging {
         val progress = (1.0 * curEpoch.toDouble * numPartitions + pI) / (numIterations * numPartitions)
         val curLearningRate = minLearningRate.fold(learningRate)(e => Math.exp(Math.log(learningRate) - (Math.log(learningRate) - Math.log(e)) * progress))
         val partitioner2 = new SkipGramPartitioner {
-          override def getPartition(item: ItemID): Int = {
+          override def getPartition(item: Long): Int = {
             val bucket = SkipGramPartitioner.hash(item, curEpoch, partitionTable.value.length)
             partitionTable.value.apply(bucket).apply(pI)
           }
