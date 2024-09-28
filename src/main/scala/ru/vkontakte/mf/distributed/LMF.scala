@@ -3,14 +3,14 @@ package ru.vkontakte.mf.distributed
 import org.apache.spark.{HashPartitioner, SparkContext}
 import org.apache.spark.internal.Logging
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{SQLContext, SaveMode}
+import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode}
 import org.apache.spark.storage.StorageLevel
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import ru.vkontakte.mf.local.{ItemData, Optimizer, Opts}
 import ru.vkontakte.mf.pair.generator.BatchedGenerator
 import ru.vkontakte.mf.pair.{LongPair, LongPairMulti, Partitioner}
-import ru.vkontakte.mf.pair.generator.w2v.{Pos2NegPairGenerator, SampleGenerator, SamplingMode}
+import ru.vkontakte.mf.pair.generator.w2v.{Item2VecGenerator, Pos2NegGenerator, SamplingMode}
 
 import java.util.Random
 import scala.collection.mutable.ArrayBuffer
@@ -23,8 +23,8 @@ import scala.util.Try
 class LMF extends Serializable with Logging {
 
   private var dotVectorSize: Int = 100
-  protected var window: Int = 5
-  protected var samplingMode: SamplingMode = SamplingMode.SAMPLE
+  protected var window: Int = _
+  protected var samplingMode: SamplingMode = _
   private var negative: Int = 5
   private var numIterations: Int = 1
   private var learningRate: Double = 0.025
@@ -171,10 +171,10 @@ class LMF extends Serializable with Logging {
                     seed: Long): RDD[LongPairMulti] = {
     sent.fold ({_.mapPartitionsWithIndex({ case (idx, it) =>
       new BatchedGenerator({
-        if (samplingMode == SamplingMode.SAMPLE) {
-          new SampleGenerator(it.asJava, window, samplingMode, partitioner1, partitioner2, seed * partitioner1.getNumPartitions + idx)
-        } else if (samplingMode == SamplingMode.SAMPLE_POS2NEG) {
-          new Pos2NegPairGenerator(it.asJava, window, samplingMode, partitioner1, partitioner2, seed * partitioner1.getNumPartitions + idx)
+        if (samplingMode == SamplingMode.ITEM2VEC) {
+          new Item2VecGenerator(it.asJava, window, samplingMode, partitioner1, partitioner2, seed * partitioner1.getNumPartitions + idx)
+        } else if (samplingMode == SamplingMode.ITEM2VEC_POS2NEG) {
+          new Pos2NegGenerator(it.asJava, window, samplingMode, partitioner1, partitioner2, seed * partitioner1.getNumPartitions + idx)
         } else if (samplingMode == SamplingMode.WINDOW) {
           assert(false)
           null
@@ -227,7 +227,7 @@ class LMF extends Serializable with Logging {
           }
         ))}
 
-    if (samplingMode == SamplingMode.SAMPLE_POS2NEG) {
+    if (samplingMode == SamplingMode.ITEM2VEC_POS2NEG) {
       emb = emb.filter(i => i.id > 0 && i.`type` == ItemData.TYPE_LEFT || i.id < 0 && i.`type` == ItemData.TYPE_RIGHT)
     }
 
@@ -290,14 +290,17 @@ class LMF extends Serializable with Logging {
     emb
   }
 
-  def fit(dataset: RDD[(Long, Long, Float)]): RDD[ItemData] = {
+  def fit(dataset: DataFrame): RDD[ItemData] = {
     assert(!((checkpointInterval > 0) ^ (checkpointPath != null)))
-
-    val sc = dataset.context
+    import dataset.sparkSession.sqlContext.implicits._
+    val sc = dataset.sparkSession.sparkContext
 
     val numExecutors = sc.getConf.get("spark.executor.instances").toInt
     val numCores = sc.getConf.get("spark.executor.cores").toInt
-    val sent = cacheAndCount(dataset.repartition(numExecutors * numCores / numThread))
+    val sent = cacheAndCount(dataset
+      .select("user", "item", "rating")
+      .as[(Long, Long, Float)].rdd
+      .repartition(numExecutors * numCores / numThread))
 
     try {
       doFit(Right(sent))

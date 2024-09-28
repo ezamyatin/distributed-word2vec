@@ -1,6 +1,7 @@
 package ru.vkontakte.mf.distributed
 
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.DataFrame
 import ru.vkontakte.mf.local.ItemData
 import ru.vkontakte.mf.pair.generator.w2v.SamplingMode
 
@@ -26,14 +27,18 @@ class SkipGram extends LMF {
     this
   }
 
-  def fit(dataset: RDD[Array[Long]]): RDD[ItemData] = {
+  override def fit(dataset: DataFrame): RDD[ItemData] = {
     assert(!((checkpointInterval > 0) ^ (checkpointPath != null)))
 
-    val sc = dataset.context
+    import dataset.sparkSession.sqlContext.implicits._
+    val sc = dataset.sparkSession.sparkContext
 
     val numExecutors = sc.getConf.get("spark.executor.instances").toInt
     val numCores = sc.getConf.get("spark.executor.cores").toInt
-    val sent = cacheAndCount(dataset.repartition(numExecutors * numCores / numThread))
+    val sent = cacheAndCount(dataset
+      .select("sequence")
+      .as[Array[Long]].rdd
+      .repartition(numExecutors * numCores / numThread))
 
     try {
       doFit(Left(sent))
