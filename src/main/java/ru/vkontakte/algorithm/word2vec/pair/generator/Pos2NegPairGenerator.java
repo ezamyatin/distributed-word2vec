@@ -1,7 +1,6 @@
 package ru.vkontakte.algorithm.word2vec.pair.generator;
 
 import it.unimi.dsi.fastutil.ints.IntArrayList;
-import ru.vkontakte.algorithm.word2vec.SkipGramUtil;
 import ru.vkontakte.algorithm.word2vec.pair.LongPair;
 import ru.vkontakte.algorithm.word2vec.pair.SamplingMode;
 import ru.vkontakte.algorithm.word2vec.pair.SkipGramPartitioner;

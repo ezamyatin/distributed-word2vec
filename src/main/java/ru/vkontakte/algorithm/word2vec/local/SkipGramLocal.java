@@ -6,7 +6,6 @@ import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import com.github.fommil.netlib.BLAS;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
-import ru.vkontakte.algorithm.word2vec.SkipGramUtil;
 import ru.vkontakte.algorithm.word2vec.pair.LongPairMulti;
 import ru.vkontakte.algorithm.word2vec.pair.SamplingMode;
 
@@ -168,9 +167,35 @@ public class SkipGramLocal {
         return f;
     }
 
+    private static void shuffle(long[] l, long[] r, @Nullable float[] w, Random rnd) {
+        int i = 0;
+        int n = l.length;
+        long t;
+        float t1;
+
+        while (i < n - 1) {
+            int j = i + rnd.nextInt(n - i);
+            t = l[j];
+            l[j] = l[i];
+            l[i] = t;
+
+            t = r[j];
+            r[j] = r[i];
+            r[i] = t;
+
+            if (w != null) {
+                t1 = w[j];
+                w[j] = w[i];
+                w[i] = t1;
+            }
+
+            i += 1;
+        }
+    }
+
     private void optimizeBatchRemapped(long[] l, long[] r, @Nullable float[] w) {
         assert l.length == r.length;
-        SkipGramUtil.shuffle(l, r, random);
+        shuffle(l, r, w, random);
 
         double lloss = 0.0;
         long llossn = 0L;
