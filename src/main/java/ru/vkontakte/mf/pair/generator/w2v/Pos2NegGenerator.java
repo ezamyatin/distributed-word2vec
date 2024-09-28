@@ -11,7 +11,7 @@ import java.util.Random;
 /**
  * @author ezamyatin
  **/
-public class Pos2NegPairGenerator extends PairGenerator {
+public class Pos2NegGenerator extends PairGenerator {
     private final int window;
     private final SamplingMode samplingMode;
     private final Partitioner partitioner1;
@@ -21,12 +21,12 @@ public class Pos2NegPairGenerator extends PairGenerator {
     private final IntArrayList sentL, sentR;
     private final IntArrayList p1, p2;
 
-    public Pos2NegPairGenerator(Iterator<long[]> sent,
-                                int window,
-                                SamplingMode samplingMode,
-                                Partitioner partitioner1,
-                                Partitioner partitioner2,
-                                long seed) {
+    public Pos2NegGenerator(Iterator<long[]> sent,
+                            int window,
+                            SamplingMode samplingMode,
+                            Partitioner partitioner1,
+                            Partitioner partitioner2,
+                            long seed) {
         super(sent, partitioner1, partitioner2);
 
         this.window = window;

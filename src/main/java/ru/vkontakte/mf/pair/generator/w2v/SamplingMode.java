@@ -5,6 +5,6 @@ package ru.vkontakte.mf.pair.generator.w2v;
  **/
 public enum SamplingMode {
     WINDOW,
-    SAMPLE,
-    SAMPLE_POS2NEG
+    ITEM2VEC,
+    ITEM2VEC_POS2NEG
 }

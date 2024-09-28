@@ -11,7 +11,7 @@ import java.util.Random;
 /**
  * @author ezamyatin
  **/
-public class SampleGenerator extends PairGenerator {
+public class Item2VecGenerator extends PairGenerator {
     private final int window;
     private final SamplingMode samplingMode;
     private final Partitioner partitioner1;
@@ -19,12 +19,12 @@ public class SampleGenerator extends PairGenerator {
     private final Random random;
     private final IntArrayList p1, p2;
 
-    public SampleGenerator(Iterator<long[]> sent,
-                           int window,
-                           SamplingMode samplingMode,
-                           Partitioner partitioner1,
-                           Partitioner partitioner2,
-                           long seed) {
+    public Item2VecGenerator(Iterator<long[]> sent,
+                             int window,
+                             SamplingMode samplingMode,
+                             Partitioner partitioner1,
+                             Partitioner partitioner2,
+                             long seed) {
         super(sent, partitioner1, partitioner2);
 
         this.window = window;
