@@ -1,4 +1,4 @@
-package ru.vkontakte.mf.sgd.pair;
+package ru.vkontakte.mf.pair;
 
 import java.io.Serializable;
 import java.util.Random;

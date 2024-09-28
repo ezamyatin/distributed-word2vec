@@ -1,9 +1,9 @@
-package ru.vkontakte.mf.sgd.pair.generator.w2v;
+package ru.vkontakte.mf.pair.generator.w2v;
 
 import it.unimi.dsi.fastutil.ints.IntArrayList;
-import ru.vkontakte.mf.sgd.pair.LongPair;
-import ru.vkontakte.mf.sgd.pair.Partitioner;
-import ru.vkontakte.mf.sgd.pair.generator.UntilNullIterator;
+import ru.vkontakte.mf.pair.LongPair;
+import ru.vkontakte.mf.pair.Partitioner;
+import ru.vkontakte.mf.pair.generator.UntilNullIterator;
 
 import java.util.Iterator;
 import java.util.Random;

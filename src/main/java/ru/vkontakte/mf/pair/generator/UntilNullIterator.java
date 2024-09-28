@@ -1,4 +1,4 @@
-package ru.vkontakte.mf.sgd.pair.generator;
+package ru.vkontakte.mf.pair.generator;
 
 import javax.annotation.Nullable;
 import java.io.Serializable;

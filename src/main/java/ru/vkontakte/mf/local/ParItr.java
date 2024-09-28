@@ -1,4 +1,4 @@
-package ru.vkontakte.mf.sgd.local;
+package ru.vkontakte.mf.local;
 
 import java.util.Arrays;
 import java.util.Iterator;

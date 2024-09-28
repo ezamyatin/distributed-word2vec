@@ -1,4 +1,4 @@
-package ru.vkontakte.mf.sgd.local;
+package ru.vkontakte.mf.local;
 
 import com.google.common.collect.Iterators;
 import com.google.common.util.concurrent.AtomicDouble;
@@ -6,7 +6,7 @@ import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import com.github.fommil.netlib.BLAS;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
-import ru.vkontakte.mf.sgd.pair.LongPairMulti;
+import ru.vkontakte.mf.pair.LongPairMulti;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;

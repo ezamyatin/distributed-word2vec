@@ -1,9 +1,9 @@
-package ru.vkontakte.mf.sgd.pair.generator;
+package ru.vkontakte.mf.pair.generator;
 
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
-import ru.vkontakte.mf.sgd.pair.LongPair;
-import ru.vkontakte.mf.sgd.pair.LongPairMulti;
+import ru.vkontakte.mf.pair.LongPairMulti;
+import ru.vkontakte.mf.pair.LongPair;
 
 import java.io.Serializable;
 import java.util.Iterator;
