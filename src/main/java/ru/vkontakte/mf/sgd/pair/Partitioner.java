@@ -7,7 +7,7 @@ import java.util.stream.IntStream;
 /**
  * @author ezamyatin
  **/
-public abstract class SkipGramPartitioner implements Serializable {
+public abstract class Partitioner implements Serializable {
     final static int PART_TABLE_TOTAL_SIZE = 10000000;
 
     private static int[] shuffle(int[] arr, Random rnd) {
@@ -27,8 +27,7 @@ public abstract class SkipGramPartitioner implements Serializable {
         return arr;
     }
 
-    public static int[][] createPartitionTable(int numPartitions,
-                                        java.util.Random rnd) {
+    public static int[][] createPartitionTable(int numPartitions, java.util.Random rnd) {
         int nBuckets = PART_TABLE_TOTAL_SIZE / numPartitions;
         int[][] result = new int[nBuckets][numPartitions];
         IntStream.range(0, nBuckets).forEach(bucket -> {
@@ -49,5 +48,5 @@ public abstract class SkipGramPartitioner implements Serializable {
 
     public abstract int getPartition(long item);
 
-    public abstract int getNumPartitions();
+    public abstract int numPartitions();
 }

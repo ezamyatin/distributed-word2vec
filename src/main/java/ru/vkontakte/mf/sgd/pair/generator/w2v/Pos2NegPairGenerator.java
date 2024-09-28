@@ -2,7 +2,7 @@ package ru.vkontakte.mf.sgd.pair.generator.w2v;
 
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import ru.vkontakte.mf.sgd.pair.LongPair;
-import ru.vkontakte.mf.sgd.pair.SkipGramPartitioner;
+import ru.vkontakte.mf.sgd.pair.Partitioner;
 import ru.vkontakte.mf.sgd.pair.generator.UntilNullIterator;
 
 import java.util.Iterator;
@@ -14,8 +14,8 @@ import java.util.Random;
 public class Pos2NegPairGenerator extends PairGenerator {
     private final int window;
     private final SamplingMode samplingMode;
-    private final SkipGramPartitioner partitioner1;
-    private final SkipGramPartitioner partitioner2;
+    private final Partitioner partitioner1;
+    private final Partitioner partitioner2;
     private final Random random;
 
     private final IntArrayList sentL, sentR;
@@ -24,8 +24,8 @@ public class Pos2NegPairGenerator extends PairGenerator {
     public Pos2NegPairGenerator(Iterator<long[]> sent,
                                 int window,
                                 SamplingMode samplingMode,
-                                SkipGramPartitioner partitioner1,
-                                SkipGramPartitioner partitioner2,
+                                Partitioner partitioner1,
+                                Partitioner partitioner2,
                                 long seed) {
         super(sent, partitioner1, partitioner2);
 
