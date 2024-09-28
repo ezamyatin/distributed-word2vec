@@ -19,7 +19,7 @@ import java.util.function.LongConsumer;
 /**
  * @author ezamyatin
  **/
-public class SkipGramLocal {
+public class Optimizer {
     private final static int UNIGRAM_TABLE_SIZE = 100000000;
 
     private static class ExpTable {
@@ -52,7 +52,7 @@ public class SkipGramLocal {
         }
     }
 
-    private final SkipGramOpts opts;
+    private final Opts opts;
 
     private final Long2IntOpenHashMap vocabL, vocabR;
     private final long[] i2R;
@@ -94,7 +94,7 @@ public class SkipGramLocal {
         return table;
     }
 
-    public SkipGramLocal(SkipGramOpts opts, Iterator<ItemData> iterator) {
+    public Optimizer(Opts opts, Iterator<ItemData> iterator) {
         this.opts = opts;
         this.vocabL = new Long2IntOpenHashMap();
         this.vocabR = new Long2IntOpenHashMap();

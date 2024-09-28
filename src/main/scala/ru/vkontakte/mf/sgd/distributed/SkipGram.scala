@@ -8,7 +8,7 @@ import org.apache.spark.storage.StorageLevel
 import SkipGram.ItemID
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
-import ru.vkontakte.mf.sgd.local.{ItemData, ParItr, SkipGramLocal, SkipGramOpts}
+import ru.vkontakte.mf.sgd.local.{ItemData, ParItr, Optimizer, Opts}
 import ru.vkontakte.mf.sgd.pair.{LongPair, LongPairMulti, SkipGramPartitioner}
 import ru.vkontakte.mf.sgd.pair.generator.BatchedGenerator
 import ru.vkontakte.mf.sgd.pair.generator.w2v.{Pos2NegPairGenerator, SampleGenerator, SamplingMode}
@@ -259,8 +259,8 @@ class SkipGram extends Serializable with Logging {
             val rnd = new Random()
             it.flatMap {case (w, n) =>
               rnd.setSeed(w.hashCode)
-              Iterator(new ItemData(ItemData.TYPE_LEFT, w, n, SkipGramLocal.initEmbedding(dotVectorSize, useBias, rnd)),
-                new ItemData(ItemData.TYPE_RIGHT, w, n, SkipGramLocal.initEmbedding(dotVectorSize, useBias, rnd)))
+              Iterator(new ItemData(ItemData.TYPE_LEFT, w, n, Optimizer.initEmbedding(dotVectorSize, useBias, rnd)),
+                new ItemData(ItemData.TYPE_RIGHT, w, n, Optimizer.initEmbedding(dotVectorSize, useBias, rnd)))
             }
       }, _.flatMap(e => Seq((ItemData.TYPE_LEFT, e._1) -> 1, (ItemData.TYPE_RIGHT, e._2) -> 1))
           .reduceByKey(_ + _).filter(_._2 >= minCount)
@@ -268,7 +268,7 @@ class SkipGram extends Serializable with Logging {
             val rnd = new Random()
             it.map { case ((t, w), n) =>
               rnd.setSeed(w.hashCode)
-              new ItemData(t, w, n, SkipGramLocal.initEmbedding(dotVectorSize, useBias, rnd))
+              new ItemData(t, w, n, Optimizer.initEmbedding(dotVectorSize, useBias, rnd))
             }
           }
       ))}
@@ -312,7 +312,7 @@ class SkipGram extends Serializable with Logging {
           .map(e => e.part -> e).partitionBy(partitionerKey).values
 
         emb = cur.zipPartitions(embLR) { case (sIt, eItLR) =>
-          val sg = new SkipGramLocal(new SkipGramOpts(dotVectorSize, useBias, negative, window,
+          val sg = new Optimizer(new Opts(dotVectorSize, useBias, negative, window,
             pow, curLearningRate, lambda), eItLR.asJava)
 
           sg.optimize(sIt.asJava, numThread)
