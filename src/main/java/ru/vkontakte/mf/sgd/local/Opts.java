@@ -10,16 +10,14 @@ public class Opts implements Serializable {
     public final int dim;
     public final boolean useBias;
     public final int negative;
-    public final int window;
     public final double pow;
     public final double lr;
     public final double lambda;
 
-    public Opts(int dim, boolean useBias, int negative, int window, double pow, double lr, double lambda) {
+    public Opts(int dim, boolean useBias, int negative, double pow, double lr, double lambda) {
         this.dim = dim;
         this.useBias = useBias;
         this.negative = negative;
-        this.window = window;
         this.pow = pow;
         this.lr = lr;
         this.lambda = lambda;
