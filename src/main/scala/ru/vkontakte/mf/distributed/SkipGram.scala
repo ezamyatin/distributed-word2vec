@@ -1,8 +1,8 @@
-package ru.vkontakte.mf.sgd.distributed
+package ru.vkontakte.mf.distributed
 
 import org.apache.spark.rdd.RDD
-import ru.vkontakte.mf.sgd.local.ItemData
-import ru.vkontakte.mf.sgd.pair.generator.w2v.SamplingMode
+import ru.vkontakte.mf.local.ItemData
+import ru.vkontakte.mf.pair.generator.w2v.SamplingMode
 
 /**
  * @author ezamyatin
