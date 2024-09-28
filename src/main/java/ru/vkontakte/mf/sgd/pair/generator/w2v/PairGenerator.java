@@ -33,7 +33,7 @@ public abstract class PairGenerator extends UntilNullIterator<LongPair> implemen
     public PairGenerator(Iterator<long[]> sent,
                          Partitioner partitioner1,
                          Partitioner partitioner2) {
-        assert partitioner1.numPartitions() == partitioner2.numPartitions();
+        assert partitioner1.getNumPartitions() == partitioner2.getNumPartitions();
         this.sent = sent;
         this.partitioner1 = partitioner1;
         this.partitioner2 = partitioner2;

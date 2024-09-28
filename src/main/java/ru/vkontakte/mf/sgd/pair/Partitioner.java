@@ -48,5 +48,5 @@ public abstract class Partitioner implements Serializable {
 
     public abstract int getPartition(long item);
 
-    public abstract int numPartitions();
+    public abstract int getNumPartitions();
 }

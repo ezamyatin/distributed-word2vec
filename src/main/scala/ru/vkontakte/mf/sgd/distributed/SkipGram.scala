@@ -221,12 +221,12 @@ class SkipGram extends Serializable with Logging {
             assert(false)
             null
           }
-        }, partitioner1.numPartitions, false).asScala
+        }, partitioner1.getNumPartitions, false).asScala
       })
     }, _.mapPartitions(it => new BatchedGenerator(it
       .filter(e => partitioner1.getPartition(e._1) == partitioner2.getPartition(e._2))
       .map(e => new LongPair(partitioner1.getPartition(e._1), e._1, e._2, e._3))
-      .asJava, partitioner1.numPartitions, true).asScala))
+      .asJava, partitioner1.getNumPartitions, true).asScala))
   }
 
   private def doFit(sent: Either[RDD[Array[Long]], RDD[(Long, Long, Float)]]): RDD[ItemData] = {
@@ -279,7 +279,7 @@ class SkipGram extends Serializable with Logging {
 
       val partitioner1 = new Partitioner {
         override def getPartition(item: Long): Int = Partitioner.hash(item, curEpoch, numPartitions)
-        override def numPartitions: Int = numPartitions
+        override def getNumPartitions: Int = numPartitions
       }
 
       ((if (curEpoch == startEpoch) startIter else 0) until numPartitions).foreach { pI =>
@@ -290,7 +290,7 @@ class SkipGram extends Serializable with Logging {
             val bucket = Partitioner.hash(item, curEpoch, partitionTable.value.length)
             partitionTable.value.apply(bucket).apply(pI)
           }
-          override def numPartitions: Int = numPartitions
+          override def getNumPartitions: Int = numPartitions
         }
 
         val partitionerKey = new HashPartitioner(numPartitions) {
