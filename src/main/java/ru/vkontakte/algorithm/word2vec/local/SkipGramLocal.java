@@ -7,7 +7,7 @@ import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import com.github.fommil.netlib.BLAS;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import ru.vkontakte.algorithm.word2vec.pair.LongPairMulti;
-import ru.vkontakte.algorithm.word2vec.pair.SamplingMode;
+import ru.vkontakte.algorithm.word2vec.pair.generator.w2v.SamplingMode;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -66,33 +66,28 @@ public class SkipGramLocal {
     public final AtomicDouble loss;
     public final AtomicLong lossn;
 
-    private static int[] initUnigramTable(long[] cn, double pow, @Nullable int[] indices) {
+    private static int[] initUnigramTable(long[] cn, double pow) {
         int[] table = new int[UNIGRAM_TABLE_SIZE];
 
-        int n;
-        if (indices != null) {
-            n = indices.length;
-        } else {
-            n = cn.length;
-        }
+        int n = cn.length;
 
         int a = 0;
         double trainWordsPow = 0.0;
 
         while (a < n) {
-            trainWordsPow += Math.pow(indices == null ? cn[a] : cn[indices[a]], pow);
+            trainWordsPow += Math.pow(cn[a], pow);
             a += 1;
         }
 
         int i = 0;
         a = 0;
-        double d1 = Math.pow(indices == null ? cn[i] : cn[indices[i]], pow) / trainWordsPow;
+        double d1 = Math.pow(cn[i], pow) / trainWordsPow;
 
         while (a < table.length && i < n) {
-            table[a] = indices == null ? i : indices[i];
+            table[a] = i;
             if (a > d1 * table.length) {
                 i += 1;
-                d1 += Math.pow(cn[indices == null ? i : indices[i]], pow) / trainWordsPow;
+                d1 += Math.pow(cn[i], pow) / trainWordsPow;
             }
             a += 1;
         }
@@ -139,13 +134,8 @@ public class SkipGramLocal {
         this.cnR = cnR.toLongArray();
         cnR = null;
 
-        if (opts.samplingMode == SamplingMode.SAMPLE_POS2NEG) {
-            unigramTable = initUnigramTable(this.cnR, opts.pow,
-                    vocabR.keySet().longStream()
-                        .filter(e -> e < 0)
-                        .mapToInt(vocabR::get).toArray());
-        } else if (opts.pow > 0) {
-            unigramTable = initUnigramTable(this.cnR, opts.pow, null);
+        if (opts.pow > 0) {
+            unigramTable = initUnigramTable(this.cnR, opts.pow);
         } else {
             unigramTable = null;
         }

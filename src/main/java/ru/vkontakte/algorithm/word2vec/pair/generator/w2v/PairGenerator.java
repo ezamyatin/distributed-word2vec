@@ -1,10 +1,9 @@
-package ru.vkontakte.algorithm.word2vec.pair.generator;
+package ru.vkontakte.algorithm.word2vec.pair.generator.w2v;
 
 import com.google.common.collect.Iterators;
 import ru.vkontakte.algorithm.word2vec.pair.LongPair;
-import ru.vkontakte.algorithm.word2vec.pair.LongPairMulti;
-import ru.vkontakte.algorithm.word2vec.pair.SamplingMode;
 import ru.vkontakte.algorithm.word2vec.pair.SkipGramPartitioner;
+import ru.vkontakte.algorithm.word2vec.pair.generator.UntilNullIterator;
 
 import java.io.Serializable;
 import java.util.Iterator;
