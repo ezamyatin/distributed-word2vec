@@ -9,8 +9,9 @@ import ru.vkontakte.algorithm.word2vec.distributed.SkipGram.ItemID
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import ru.vkontakte.algorithm.word2vec.local.{ItemData, ParItr, SkipGramLocal, SkipGramOpts}
-import ru.vkontakte.algorithm.word2vec.pair.{LongPair, LongPairMulti, SamplingMode, SkipGramPartitioner}
-import ru.vkontakte.algorithm.word2vec.pair.generator.{BatchedGenerator, Pos2NegPairGenerator, SampleGenerator}
+import ru.vkontakte.algorithm.word2vec.pair.generator.w2v.{Pos2NegPairGenerator, SampleGenerator, SamplingMode}
+import ru.vkontakte.algorithm.word2vec.pair.{LongPair, LongPairMulti, SkipGramPartitioner}
+import ru.vkontakte.algorithm.word2vec.pair.generator.BatchedGenerator
 
 import java.util.Random
 import java.util.function.Consumer
@@ -272,6 +273,10 @@ class SkipGram extends Serializable with Logging {
           }
       ))}
 
+    if (samplingMode == SamplingMode.SAMPLE_POS2NEG) {
+      emb = emb.filter(i => i.id > 0 && i.`type` == ItemData.TYPE_LEFT || i.id < 0 && i.`type` == ItemData.TYPE_RIGHT)
+    }
+
     var checkpointIter = 0
     val (startEpoch, startIter) = latest.getOrElse((0, 0))
     val cached = ArrayBuffer.empty[RDD[ItemData]]
@@ -308,7 +313,7 @@ class SkipGram extends Serializable with Logging {
 
         emb = cur.zipPartitions(embLR) { case (sIt, eItLR) =>
           val sg = new SkipGramLocal(new SkipGramOpts(dotVectorSize, useBias, negative, window,
-            pow, curLearningRate, lambda, samplingMode), eItLR.asJava)
+            pow, curLearningRate, lambda), eItLR.asJava)
 
           sg.optimize(sIt.asJava, numThread)
 
