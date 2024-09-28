@@ -8,7 +8,7 @@ import org.apache.spark.storage.StorageLevel
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import ru.vkontakte.mf.sgd.local.{ItemData, ParItr, Optimizer, Opts}
-import ru.vkontakte.mf.sgd.pair.{LongPair, LongPairMulti, SkipGramPartitioner}
+import ru.vkontakte.mf.sgd.pair.{LongPair, LongPairMulti, Partitioner}
 import ru.vkontakte.mf.sgd.pair.generator.BatchedGenerator
 import ru.vkontakte.mf.sgd.pair.generator.w2v.{Pos2NegPairGenerator, SampleGenerator, SamplingMode}
 
@@ -205,8 +205,8 @@ class SkipGram extends Serializable with Logging {
 
   private def pairs(sent: Either[RDD[Array[Long]], RDD[(Long, Long, Float)]],
                     curEpoch: Int, pI: Int,
-                    partitioner1: SkipGramPartitioner,
-                    partitioner2: SkipGramPartitioner): RDD[LongPairMulti] = {
+                    partitioner1: Partitioner,
+                    partitioner2: Partitioner): RDD[LongPairMulti] = {
     sent.fold ({_.mapPartitionsWithIndex({ case (idx, it) =>
         val seed = (1L * curEpoch * numPartitions + pI) * numPartitions + idx
         new BatchedGenerator({
@@ -221,12 +221,12 @@ class SkipGram extends Serializable with Logging {
             assert(false)
             null
           }
-        }, partitioner1.getNumPartitions, false).asScala
+        }, partitioner1.numPartitions, false).asScala
       })
     }, _.mapPartitions(it => new BatchedGenerator(it
       .filter(e => partitioner1.getPartition(e._1) == partitioner2.getPartition(e._2))
       .map(e => new LongPair(partitioner1.getPartition(e._1), e._1, e._2, e._3))
-      .asJava, partitioner1.getNumPartitions, true).asScala))
+      .asJava, partitioner1.numPartitions, true).asScala))
   }
 
   private def doFit(sent: Either[RDD[Array[Long]], RDD[(Long, Long, Float)]]): RDD[ItemData] = {
@@ -273,24 +273,24 @@ class SkipGram extends Serializable with Logging {
     var checkpointIter = 0
     val (startEpoch, startIter) = latest.getOrElse((0, 0))
     val cached = ArrayBuffer.empty[RDD[ItemData]]
-    val partitionTable = sparkContext.broadcast(SkipGramPartitioner.createPartitionTable(numPartitions, new Random(0)))
+    val partitionTable = sparkContext.broadcast(Partitioner.createPartitionTable(numPartitions, new Random(0)))
 
     (startEpoch until numIterations).foreach {curEpoch =>
 
-      val partitioner1 = new SkipGramPartitioner {
-        override def getPartition(item: Long): Int = SkipGramPartitioner.hash(item, curEpoch, numPartitions)
-        override def getNumPartitions: Int = numPartitions
+      val partitioner1 = new Partitioner {
+        override def getPartition(item: Long): Int = Partitioner.hash(item, curEpoch, numPartitions)
+        override def numPartitions: Int = numPartitions
       }
 
       ((if (curEpoch == startEpoch) startIter else 0) until numPartitions).foreach { pI =>
         val progress = (1.0 * curEpoch.toDouble * numPartitions + pI) / (numIterations * numPartitions)
         val curLearningRate = minLearningRate.fold(learningRate)(e => Math.exp(Math.log(learningRate) - (Math.log(learningRate) - Math.log(e)) * progress))
-        val partitioner2 = new SkipGramPartitioner {
+        val partitioner2 = new Partitioner {
           override def getPartition(item: Long): Int = {
-            val bucket = SkipGramPartitioner.hash(item, curEpoch, partitionTable.value.length)
+            val bucket = Partitioner.hash(item, curEpoch, partitionTable.value.length)
             partitionTable.value.apply(bucket).apply(pI)
           }
-          override def getNumPartitions: Int = numPartitions
+          override def numPartitions: Int = numPartitions
         }
 
         val partitionerKey = new HashPartitioner(numPartitions) {
