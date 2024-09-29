@@ -271,7 +271,8 @@ class LMF extends Serializable with Logging {
 
           sg.optimize(sIt.asJava, numThread)
 
-          println("LOSS: " + sg.loss.doubleValue() / sg.lossn.longValue() + " (" + sg.loss.doubleValue() + " / " + sg.lossn.longValue() + ")")
+          println("LOSS: " + sg.loss.doubleValue() / sg.lossn.longValue() + " (" + sg.loss.doubleValue() + " / " + sg.lossn.longValue() + ")" + "\t"  +
+            sg.lossReg.doubleValue() / sg.lossnReg.longValue() + " (" + sg.lossReg.doubleValue() + " / " + sg.lossnReg.longValue() + ")")
 
           sg.flush().asScala
         }.persist(intermediateRDDStorageLevel)
