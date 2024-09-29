@@ -41,8 +41,8 @@ public class Optimizer {
             while (i < EXP_TABLE_SIZE) {
                 double tmp = Math.exp((2.0 * i / EXP_TABLE_SIZE - 1.0) * MAX_EXP);
                 sigm[i] = (float)(tmp / (tmp + 1.0));
-                loss0[i] = (float)Math.log(sigm[i]);
-                loss1[i] = (float)Math.log(1 - sigm[i]);
+                loss0[i] = (float)Math.log(1 - sigm[i]);
+                loss1[i] = (float)Math.log(sigm[i]);
                 i += 1;
             }
         }
@@ -62,8 +62,8 @@ public class Optimizer {
     private final ThreadLocalRandom random;
     private final BLAS blas = BLAS.getInstance();
 
-    public final AtomicDouble loss;
-    public final AtomicLong lossn;
+    public final AtomicDouble loss, lossReg;
+    public final AtomicLong lossn, lossnReg;
 
     private static int[] initUnigramTable(long[] cn, double pow) {
         int[] table = new int[UNIGRAM_TABLE_SIZE];
@@ -145,7 +145,9 @@ public class Optimizer {
 
         random = ThreadLocalRandom.current();
         loss = new AtomicDouble(0);
+        lossReg = new AtomicDouble(0);
         lossn = new AtomicLong(0);
+        lossnReg = new AtomicLong(0);
     }
 
     public static float[] initEmbedding(int dim, boolean useBias, Random rnd) {
@@ -187,7 +189,9 @@ public class Optimizer {
         shuffle(l, r, w, random);
 
         double lloss = 0.0;
+        double llossReg = 0.0;
         long llossn = 0L;
+        long llossnReg = 0L;
         int pos = 0;
         int word;
         int lastWord;
@@ -252,7 +256,13 @@ public class Optimizer {
                     }
                     g = (float)((label - sigm) * opts.lr * weight);
 
-                    if (opts.lambda > 0) {
+                    if (opts.lambda > 0 && label > 0) {
+                        llossReg += opts.lambda * blas.sdot(opts.dim, syn0, l1, 1, syn0, l1, 1);
+                        llossReg += opts.lambda * blas.sdot(opts.dim, syn1neg, l2, 1, syn1neg, l2, 1);
+                        llossnReg += 1;
+                    }
+
+                    if (opts.lambda > 0 && label > 0) {
                         blas.saxpy(opts.dim, (float)(-opts.lambda * opts.lr), syn0, l1, 1, neu1e, 0, 1);
                     }
                     blas.saxpy(opts.dim, g, syn1neg, l2, 1, neu1e, 0, 1);
@@ -260,7 +270,7 @@ public class Optimizer {
                         neu1e[opts.dim] += g * 1;
                     }
 
-                    if (opts.lambda > 0) {
+                    if (opts.lambda > 0 && label > 0) {
                         blas.saxpy(opts.dim, (float)(-opts.lambda * opts.lr), syn1neg, l2, 1, syn1neg, l2, 1);
                     }
                     blas.saxpy(opts.dim, g, syn0, l1, 1, syn1neg, l2, 1);
@@ -274,8 +284,11 @@ public class Optimizer {
             pos += 1;
         }
 
+
         loss.addAndGet(lloss);
+        lossReg.addAndGet(llossReg);
         lossn.addAndGet(llossn);
+        lossnReg.addAndGet(llossnReg);
     }
 
     public void optimize(Iterator<LongPairMulti> data, int cpus) {
