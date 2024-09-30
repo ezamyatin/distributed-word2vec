@@ -2,13 +2,22 @@ package ru.vkontakte.mf.distributed
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
-import ru.vkontakte.mf.local.ItemData
-import ru.vkontakte.mf.pair.generator.w2v.SamplingMode
+import ru.vkontakte.mf.local.{ItemData, Optimizer}
+import ru.vkontakte.mf.pair.generator.BatchedGenerator
+import ru.vkontakte.mf.pair.{LongPairMulti, Partitioner}
+import ru.vkontakte.mf.pair.generator.w2v.{Item2VecGenerator, Pos2NegGenerator, SamplingMode}
+
+import java.util.Random
+import scala.jdk.CollectionConverters.{asJavaIteratorConverter, asScalaIteratorConverter}
 
 /**
  * @author ezamyatin
  * */
-class SkipGram extends LMF {
+class SkipGram extends BaseLMF {
+
+  private var minCount: Int = 1
+  private var window: Int = 1
+  private var samplingMode: SamplingMode = _
 
   def setWindowSize(window: Int): this.type = {
     require(window > 0,
@@ -22,8 +31,9 @@ class SkipGram extends LMF {
     this
   }
 
-  override def setMinUserCount(minCount: Int): this.type = {
-    throw new UnsupportedOperationException("minUserCount is not allowed in SkipGram mode")
+  def setMinCount(minCount: Int): this.type = {
+    require(minCount >= 0)
+    this.minCount = minCount
     this
   }
 
@@ -45,5 +55,42 @@ class SkipGram extends LMF {
     } finally {
       sent.unpersist()
     }
+  }
+
+  override protected def pairsFromSeq(sent: RDD[Array[Long]], partitioner1: Partitioner, partitioner2: Partitioner, seed: Long): RDD[LongPairMulti] = {
+    sent.mapPartitionsWithIndex({ case (idx, it) =>
+      new BatchedGenerator({
+        if (samplingMode == SamplingMode.ITEM2VEC) {
+          new Item2VecGenerator(it.asJava, window, samplingMode, partitioner1, partitioner2, seed * partitioner1.getNumPartitions + idx)
+        } else if (samplingMode == SamplingMode.ITEM2VEC_POS2NEG) {
+          new Pos2NegGenerator(it.asJava, window, samplingMode, partitioner1, partitioner2, seed * partitioner1.getNumPartitions + idx)
+        } else if (samplingMode == SamplingMode.WINDOW) {
+          assert(false)
+          null
+        } else {
+          assert(false)
+          null
+        }
+      }, partitioner1.getNumPartitions, false).asScala
+    })
+  }
+
+  override protected def initializeFromSeq(sent: RDD[Array[Long]]): RDD[ItemData] = {
+    var r = sent.flatMap(identity(_)).map(_ -> 1L)
+      .reduceByKey(_ + _).filter(_._2 >= minCount)
+      .mapPartitions { it =>
+        val rnd = new Random()
+        it.flatMap { case (w, n) =>
+          rnd.setSeed(w.hashCode)
+          Iterator(new ItemData(ItemData.TYPE_LEFT, w, n, Optimizer.initEmbedding(dotVectorSize, useBias, rnd)),
+            new ItemData(ItemData.TYPE_RIGHT, w, n, Optimizer.initEmbedding(dotVectorSize, useBias, rnd)))
+        }
+      }
+
+    if (samplingMode == SamplingMode.ITEM2VEC_POS2NEG) {
+      r = r.filter(i => i.id > 0 && i.`type` == ItemData.TYPE_LEFT || i.id < 0 && i.`type` == ItemData.TYPE_RIGHT)
+    }
+
+    r
   }
 }
