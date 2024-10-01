@@ -61,9 +61,9 @@ class SkipGram extends BaseLMF {
     sent.mapPartitionsWithIndex({ case (idx, it) =>
       new BatchedGenerator({
         if (samplingMode == SamplingMode.ITEM2VEC) {
-          new Item2VecGenerator(it.asJava, window, samplingMode, partitioner1, partitioner2, seed * partitioner1.getNumPartitions + idx)
+          new Item2VecGenerator(it.asJava, window, partitioner1, partitioner2, seed * partitioner1.getNumPartitions + idx)
         } else if (samplingMode == SamplingMode.ITEM2VEC_POS2NEG) {
-          new Pos2NegGenerator(it.asJava, window, samplingMode, partitioner1, partitioner2, seed * partitioner1.getNumPartitions + idx)
+          new Pos2NegGenerator(it.asJava, window, partitioner1, partitioner2, seed * partitioner1.getNumPartitions + idx)
         } else if (samplingMode == SamplingMode.WINDOW) {
           assert(false)
           null

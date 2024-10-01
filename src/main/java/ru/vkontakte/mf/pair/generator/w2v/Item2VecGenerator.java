@@ -13,24 +13,17 @@ import java.util.Random;
  **/
 public class Item2VecGenerator extends PairGenerator {
     private final int window;
-    private final SamplingMode samplingMode;
-    private final Partitioner partitioner1;
-    private final Partitioner partitioner2;
     private final Random random;
     private final IntArrayList p1, p2;
 
     public Item2VecGenerator(Iterator<long[]> sent,
                              int window,
-                             SamplingMode samplingMode,
                              Partitioner partitioner1,
                              Partitioner partitioner2,
                              long seed) {
         super(sent, partitioner1, partitioner2);
 
         this.window = window;
-        this.samplingMode = samplingMode;
-        this.partitioner1 = partitioner1;
-        this.partitioner2 = partitioner2;
         this.random = new Random(seed);
         this.p1 = new IntArrayList(1000);
         this.p2 = new IntArrayList(1000);
@@ -42,8 +35,8 @@ public class Item2VecGenerator extends PairGenerator {
         p2.clear();
 
         for (int i = 0; i < sent.length; ++i) {
-            p1.add(partitioner1.getPartition(sent[i]));
-            p2.add(partitioner2.getPartition(sent[i]));
+            p1.add(partitioner1().getPartition(sent[i]));
+            p2.add(partitioner2().getPartition(sent[i]));
         }
 
         return new UntilNullIterator<LongPair>() {
