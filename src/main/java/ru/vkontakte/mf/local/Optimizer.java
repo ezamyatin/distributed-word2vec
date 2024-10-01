@@ -242,16 +242,16 @@ public class Optimizer {
 
                     if (f > ExpTable.MAX_EXP) {
                         sigm = 1.0f;
-                        lloss += (-(label > 0 ? 0 : -6.00247569));
+                        lloss += (-(label > 0 ? 0 : -6.00247569)) * weight;
                         llossn += 1;
                     } else if (f < -ExpTable.MAX_EXP) {
                         sigm = 0.0f;
-                        lloss += (-(label > 0 ? -6.00247569 : 0));
+                        lloss += (-(label > 0 ? -6.00247569 : 0)) * weight;
                         llossn += 1;
                     } else {
                         int ind = (int)((f + ExpTable.MAX_EXP) * (ExpTable.EXP_TABLE_SIZE / ExpTable.MAX_EXP / 2.0));
                         sigm = expTable.sigm[ind];
-                        lloss += (-((label > 0) ? expTable.loss1[ind] : expTable.loss0[ind]));
+                        lloss += (-((label > 0) ? expTable.loss1[ind] : expTable.loss0[ind])) * weight;
                         llossn += 1;
                     }
                     g = (float)((label - sigm) * opts.lr * weight);
