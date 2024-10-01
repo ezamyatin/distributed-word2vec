@@ -24,7 +24,10 @@ class LMF extends BaseLMF {
 
   private var minUserCount: Int = 1
   private var minItemCount: Int = 1
-  override def gamma: Float = 1f / negative
+  private var useImplicitPref: Boolean = true
+
+  override protected def implicitPref: Boolean = useImplicitPref
+  override protected def gamma: Float = 1f / negative
 
   def setMinUserCount(minCount: Int): this.type = {
     require(minCount >= 0)
@@ -35,6 +38,11 @@ class LMF extends BaseLMF {
   def setMinItemCount(minCount: Int): this.type = {
     require(minCount >= 0)
     this.minItemCount = minCount
+    this
+  }
+
+  def setImplicitPref(implicitPref: Boolean): this.type = {
+    this.useImplicitPref = implicitPref
     this
   }
 
