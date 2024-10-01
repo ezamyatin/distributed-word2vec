@@ -5,7 +5,7 @@ import org.apache.spark.sql.DataFrame
 import ru.vkontakte.mf.local.{ItemData, Optimizer}
 import ru.vkontakte.mf.pair.generator.BatchedGenerator
 import ru.vkontakte.mf.pair.{LongPairMulti, Partitioner}
-import ru.vkontakte.mf.pair.generator.w2v.{Item2VecGenerator, Pos2NegGenerator, SamplingMode}
+import ru.vkontakte.mf.pair.generator.w2v.{Item2VecGenerator, Pos2NegGenerator, SamplingMode, WindowGenerator}
 
 import java.util.Random
 import scala.jdk.CollectionConverters.{asJavaIteratorConverter, asScalaIteratorConverter}
@@ -65,8 +65,7 @@ class SkipGram extends BaseLMF {
         } else if (samplingMode == SamplingMode.ITEM2VEC_POS2NEG) {
           new Pos2NegGenerator(it.asJava, window, partitioner1, partitioner2, seed * partitioner1.getNumPartitions + idx)
         } else if (samplingMode == SamplingMode.WINDOW) {
-          assert(false)
-          null
+          new WindowGenerator(it.asJava, window, partitioner1, partitioner2)
         } else {
           assert(false)
           null
