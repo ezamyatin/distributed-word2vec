@@ -10,7 +10,7 @@ import java.util.function.Consumer;
  * @author ezamyatin
  **/
 public class ParItr {
-    public static <A> void foreach(Iterator<A> iterator, Consumer<A> fn, int cpus) {
+    public static <A> void foreach(Iterator<A> iterator, int cpus, Consumer<A> fn) {
         LinkedBlockingQueue<A> inQueue = new LinkedBlockingQueue<A>(cpus * 5);
         AtomicLong totalCounter = new AtomicLong(0);
         Thread[] threads = new Thread[cpus];

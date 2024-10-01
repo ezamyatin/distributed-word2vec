@@ -147,19 +147,26 @@ public class Optimizer {
             }
         }
 
-        this.i2R = new long[vocabR.size()];
-        vocabR.keySet().forEach((LongConsumer)e -> i2R[vocabR.get(e)] = e);
-
         this.cnL = cnL.toLongArray();
         cnL = null;
         this.cnR = cnR.toLongArray();
         cnR = null;
 
-        if (opts.pow > 0) {
-            unigramTable = initUnigramTable(this.cnR, opts.pow);
+        if (opts.implicit) {
+            this.i2R = new long[vocabR.size()];
+            vocabR.keySet().forEach((LongConsumer) e -> i2R[vocabR.get(e)] = e);
+
+            if (opts.pow > 0) {
+                unigramTable = initUnigramTable(this.cnR, opts.pow);
+            } else {
+                unigramTable = null;
+            }
+
         } else {
+            this.i2R = null;
             unigramTable = null;
         }
+
         syn0 = rawSyn0.toFloatArray();
         rawSyn0 = null;
         syn1neg = rawSyn1neg.toFloatArray();
@@ -323,6 +330,7 @@ public class Optimizer {
                 int l1 = lastWord * opts.vectorSize();
                 int l2 = word * opts.vectorSize();
                 float label = rating[pos];
+                assert label == 0.0 || label == 1.0;
 
                 float f = blas.sdot(opts.dim, syn0, l1, 1, syn1neg, l2, 1);
                 if (opts.useBias) {
@@ -379,7 +387,9 @@ public class Optimizer {
             public LongPairMulti next() {
                 return data.next().remap(vocabL, vocabR);
             }
-        }, t -> this.optimizeImplicitBatchRemapped(t.left, t.right, t.rating), cpus);
+        }, cpus, opts.implicit ?
+                t -> this.optimizeImplicitBatchRemapped(t.left, t.right, t.rating) :
+                t -> this.optimizeExplicitBatchRemapped(t.left, t.right, t.rating));
     }
 
     public Iterator<ItemData> flush() {

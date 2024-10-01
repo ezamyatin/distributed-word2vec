@@ -228,7 +228,7 @@ private[distributed] abstract class BaseLMF extends Serializable with Logging {
         ).map(e => e.part -> e).partitionBy(partitionerKey).values
 
         emb = cur.zipPartitions(embLR) { case (sIt, eItLR) =>
-          val sg = new Optimizer(new Opts(dotVectorSize, useBias, negative, pow, curLearningRate, lambda, gamma), eItLR.asJava)
+          val sg = new Optimizer(new Opts(dotVectorSize, useBias, negative, pow, curLearningRate, lambda, gamma, true), eItLR.asJava)
 
           sg.optimize(sIt.asJava, numThread)
 
