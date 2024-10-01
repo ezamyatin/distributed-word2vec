@@ -227,7 +227,7 @@ public class Optimizer {
                                 target = random.nextInt(vocabR.size());
                             }
                         }
-                        weight = 1f;
+                        weight = opts.gamma;
                         label = 0;
                     }
                     int l2 = target * opts.vectorSize();

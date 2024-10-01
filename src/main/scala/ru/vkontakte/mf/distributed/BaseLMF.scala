@@ -23,7 +23,7 @@ import scala.util.Try
 private[distributed] abstract class BaseLMF extends Serializable with Logging {
 
   protected var dotVectorSize: Int = 100
-  private var negative: Int = 5
+  protected var negative: Int = 5
   private var numIterations: Int = 1
   private var learningRate: Double = 0.025
   private var minLearningRate: Option[Double] = None
@@ -75,7 +75,7 @@ private[distributed] abstract class BaseLMF extends Serializable with Logging {
   }
 
   def setNumIterations(numIterations: Int): this.type = {
-    require(numIterations >= 0,
+    require(numIterations > 0,
       s"Number of iterations must be nonnegative but got ${numIterations}")
     this.numIterations = numIterations
     this
@@ -101,8 +101,7 @@ private[distributed] abstract class BaseLMF extends Serializable with Logging {
   }
 
   def setNegative(negative: Int): this.type = {
-    require(negative >= 0,
-      s"Number of negative samples ${negative}")
+    require(negative > 0)
     this.negative = negative
     this
   }
@@ -171,6 +170,8 @@ private[distributed] abstract class BaseLMF extends Serializable with Logging {
     throw new NotImplementedError()
   }
 
+  protected def gamma: Float = 1f
+
   protected def doFit(sent: Either[RDD[Array[Long]], RDD[(Long, Long, Float)]]): RDD[ItemData] = {
     val sparkContext = sent.fold(_.sparkContext, _.sparkContext)
 
@@ -227,7 +228,7 @@ private[distributed] abstract class BaseLMF extends Serializable with Logging {
         ).map(e => e.part -> e).partitionBy(partitionerKey).values
 
         emb = cur.zipPartitions(embLR) { case (sIt, eItLR) =>
-          val sg = new Optimizer(new Opts(dotVectorSize, useBias, negative, pow, curLearningRate, lambda), eItLR.asJava)
+          val sg = new Optimizer(new Opts(dotVectorSize, useBias, negative, pow, curLearningRate, lambda, gamma), eItLR.asJava)
 
           sg.optimize(sIt.asJava, numThread)
 

@@ -24,6 +24,7 @@ class LMF extends BaseLMF {
 
   private var minUserCount: Int = 1
   private var minItemCount: Int = 1
+  override def gamma: Float = 1f / negative
 
   def setMinUserCount(minCount: Int): this.type = {
     require(minCount >= 0)
