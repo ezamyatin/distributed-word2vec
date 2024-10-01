@@ -26,9 +26,9 @@ public class Optimizer {
         final public static int EXP_TABLE_SIZE = 1000;
         final public static int MAX_EXP = 6;
 
-        public float[] sigm;
-        public float[] loss0;
-        public float[] loss1;
+        private final float[] sigm;
+        private final float[] loss0;
+        private final float[] loss1;
 
         private static final ExpTable INSTANCE = new ExpTable();
 
@@ -49,6 +49,28 @@ public class Optimizer {
 
         public static ExpTable getInstance() {
             return INSTANCE;
+        }
+
+        public float sigmoid(float f) {
+            if (f > ExpTable.MAX_EXP) {
+                return 1.0f;
+            } else if (f < -ExpTable.MAX_EXP) {
+                return 0.0f;
+            } else {
+                int ind = (int)((f + ExpTable.MAX_EXP) * (ExpTable.EXP_TABLE_SIZE / ExpTable.MAX_EXP / 2.0));
+                return this.sigm[ind];
+            }
+        }
+
+        public float logloss(float f, float label) {
+            if (f > ExpTable.MAX_EXP) {
+                return (-(label > 0 ? 0f : -6.00247569f));
+            } else if (f < -ExpTable.MAX_EXP) {
+                return  (-(label > 0 ? -6.00247569f : 0f));
+            } else {
+                int ind = (int)((f + ExpTable.MAX_EXP) * (ExpTable.EXP_TABLE_SIZE / ExpTable.MAX_EXP / 2.0));
+                return (-((label > 0) ? this.loss1[ind] : this.loss0[ind]));
+            }
         }
     }
 
@@ -184,7 +206,7 @@ public class Optimizer {
         }
     }
 
-    private void optimizeBatchRemapped(long[] l, long[] r, @Nullable float[] w) {
+    private void optimizeImplicitBatchRemapped(long[] l, long[] r, @Nullable float[] w) {
         assert l.length == r.length;
         shuffle(l, r, w, random);
 
@@ -237,24 +259,11 @@ public class Optimizer {
                         f += syn1neg[l2 + opts.dim];
                     }
 
-                    float g;
-                    float sigm;
+                    float sigm = expTable.sigmoid(f);
+                    lloss += expTable.logloss(f, label) * weight;
+                    llossn += 1;
 
-                    if (f > ExpTable.MAX_EXP) {
-                        sigm = 1.0f;
-                        lloss += (-(label > 0 ? 0 : -6.00247569)) * weight;
-                        llossn += 1;
-                    } else if (f < -ExpTable.MAX_EXP) {
-                        sigm = 0.0f;
-                        lloss += (-(label > 0 ? -6.00247569 : 0)) * weight;
-                        llossn += 1;
-                    } else {
-                        int ind = (int)((f + ExpTable.MAX_EXP) * (ExpTable.EXP_TABLE_SIZE / ExpTable.MAX_EXP / 2.0));
-                        sigm = expTable.sigm[ind];
-                        lloss += (-((label > 0) ? expTable.loss1[ind] : expTable.loss0[ind])) * weight;
-                        llossn += 1;
-                    }
-                    g = (float)((label - sigm) * opts.lr * weight);
+                    float g = (float)((label - sigm) * opts.lr * weight);
 
                     if (opts.lambda > 0 && label > 0) {
                         llossReg += opts.lambda * blas.sdot(opts.dim, syn0, l1, 1, syn0, l1, 1);
@@ -291,6 +300,74 @@ public class Optimizer {
         lossnReg.addAndGet(llossnReg);
     }
 
+    private void optimizeExplicitBatchRemapped(long[] l, long[] r, float[] rating) {
+        assert l.length == r.length;
+        shuffle(l, r, rating, random);
+
+        double lloss = 0.0;
+        double llossReg = 0.0;
+        long llossn = 0L;
+        long llossnReg = 0L;
+        int pos = 0;
+        int word;
+        int lastWord;
+        float[] neu1e = new float[opts.vectorSize()];
+        ExpTable expTable = ExpTable.getInstance();
+
+        while (pos < l.length) {
+            lastWord = (int)l[pos];
+            word = (int)r[pos];
+
+            if (word != -1 && lastWord != -1) {
+                Arrays.fill(neu1e, 0);
+                int l1 = lastWord * opts.vectorSize();
+                int l2 = word * opts.vectorSize();
+                float label = rating[pos];
+
+                float f = blas.sdot(opts.dim, syn0, l1, 1, syn1neg, l2, 1);
+                if (opts.useBias) {
+                    f += syn0[l1 + opts.dim];
+                    f += syn1neg[l2 + opts.dim];
+                }
+
+                float sigm = expTable.sigmoid(f);
+                lloss += expTable.logloss(f, label);
+                llossn += 1;
+
+                float g = (float)((label - sigm) * opts.lr);
+
+                if (opts.lambda > 0 && label > 0) {
+                    llossReg += opts.lambda * blas.sdot(opts.dim, syn0, l1, 1, syn0, l1, 1);
+                    llossReg += opts.lambda * blas.sdot(opts.dim, syn1neg, l2, 1, syn1neg, l2, 1);
+                    llossnReg += 1;
+                }
+
+                if (opts.lambda > 0 && label > 0) {
+                    blas.saxpy(opts.dim, (float)(-opts.lambda * opts.lr), syn0, l1, 1, neu1e, 0, 1);
+                }
+                blas.saxpy(opts.dim, g, syn1neg, l2, 1, neu1e, 0, 1);
+                if (opts.useBias) {
+                    neu1e[opts.dim] += g * 1;
+                }
+
+                if (opts.lambda > 0 && label > 0) {
+                    blas.saxpy(opts.dim, (float)(-opts.lambda * opts.lr), syn1neg, l2, 1, syn1neg, l2, 1);
+                }
+                blas.saxpy(opts.dim, g, syn0, l1, 1, syn1neg, l2, 1);
+                if (opts.useBias) {
+                    syn1neg[l2 + opts.dim] += g * 1;
+                }
+                blas.saxpy(opts.vectorSize(), 1.0f, neu1e, 0, 1, syn0, l1, 1);
+            }
+            pos += 1;
+        }
+
+        loss.addAndGet(lloss);
+        lossReg.addAndGet(llossReg);
+        lossn.addAndGet(llossn);
+        lossnReg.addAndGet(llossnReg);
+    }
+
     public void optimize(Iterator<LongPairMulti> data, int cpus) {
         ParItr.foreach(new Iterator<LongPairMulti>() {
             @Override
@@ -302,7 +379,7 @@ public class Optimizer {
             public LongPairMulti next() {
                 return data.next().remap(vocabL, vocabR);
             }
-        }, t -> this.optimizeBatchRemapped(t.left, t.right, t.rating), cpus);
+        }, t -> this.optimizeImplicitBatchRemapped(t.left, t.right, t.rating), cpus);
     }
 
     public Iterator<ItemData> flush() {
