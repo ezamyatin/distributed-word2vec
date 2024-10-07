@@ -20,7 +20,7 @@ import scala.util.Try
 /**
  * @author ezamyatin
  * */
-private[distributed] abstract class BaseLMF extends Serializable with Logging {
+private[distributed] abstract class BaseLMF[T] extends Serializable with Logging {
 
   protected var dotVectorSize: Int = 100
   protected var negative: Int = 5
@@ -151,30 +151,15 @@ private[distributed] abstract class BaseLMF extends Serializable with Logging {
     Try(hdfs.listStatus(new Path(path)).map(_.getPath.getName)).getOrElse(Array.empty)
   }
 
-  protected def pairsFromSeq(sent: RDD[Array[Long]],
+  protected def pairs(sent: RDD[T],
                              partitioner1: Partitioner,
                              partitioner2: Partitioner,
-                             seed: Long): RDD[LongPairMulti] = {
-    throw new NotImplementedError()
-  }
+                             seed: Long): RDD[LongPairMulti]
 
-  protected def pairsFromRat(sent: RDD[(Long, Long, Float)],
-                             partitioner1: Partitioner,
-                             partitioner2: Partitioner,
-                             seed: Long): RDD[LongPairMulti] = {
-    throw new NotImplementedError()
-  }
+  protected def initialize(sent: RDD[T]): RDD[ItemData]
 
-  protected def initializeFromSeq(sent: RDD[Array[Long]]): RDD[ItemData] = {
-    throw new NotImplementedError()
-  }
-
-  protected def initializeFromRat(sent: RDD[(Long, Long, Float)]): RDD[ItemData] = {
-    throw new NotImplementedError()
-  }
-
-  protected def doFit(sent: Either[RDD[Array[Long]], RDD[(Long, Long, Float)]]): RDD[ItemData] = {
-    val sparkContext = sent.fold(_.sparkContext, _.sparkContext)
+  protected def doFit(sent: RDD[T]): RDD[ItemData] = {
+    val sparkContext = sent.sparkContext
 
     val latest = if (checkpointPath != null) {
       listFiles(checkpointPath)
@@ -189,7 +174,7 @@ private[distributed] abstract class BaseLMF extends Serializable with Logging {
     latest.foreach(x => println(s"Continue training from epoch = ${x._1}, iteration = ${x._2}"))
 
     var emb = latest.map(x => checkpoint(null, checkpointPath + "/" + x._1 + "_" + x._2)(sparkContext))
-      .getOrElse{cacheAndCount(sent.fold(initializeFromSeq, initializeFromRat))}
+      .getOrElse{cacheAndCount(initialize(sent))}
 
     var checkpointIter = 0
     val (startEpoch, startIter) = latest.getOrElse((0, 0))
@@ -223,10 +208,8 @@ private[distributed] abstract class BaseLMF extends Serializable with Logging {
           .keyBy(i => if (i.`type` == ItemData.TYPE_LEFT) partitioner1.getPartition(i.id) else partitioner2.getPartition(i.id))
           .partitionBy(partitionerKey).values
 
-        val cur = sent.fold(
-          pairsFromSeq(_, partitioner1, partitioner2, (1L * curEpoch * numPartitions + pI) * numPartitions),
-          pairsFromRat(_, partitioner1, partitioner2, (1L * curEpoch * numPartitions + pI) * numPartitions)
-        ).map(e => e.part -> e).partitionBy(partitionerKey).values
+        val cur = pairs(sent, partitioner1, partitioner2, (1L * curEpoch * numPartitions + pI) * numPartitions)
+            .map(e => e.part -> e).partitionBy(partitionerKey).values
 
         emb = cur.zipPartitions(embLR) { case (sIt, eItLR) =>
           val sg = new Optimizer(new Opts(dotVectorSize, useBias, negative, pow, curLearningRate, lambda, gamma, implicitPref), eItLR.asJava)

@@ -13,7 +13,7 @@ import scala.jdk.CollectionConverters.{asJavaIteratorConverter, asScalaIteratorC
 /**
  * @author ezamyatin
  * */
-class SkipGram extends BaseLMF {
+class SkipGram extends BaseLMF[Array[Long]] {
 
   private var minCount: Int = 1
   private var window: Int = 1
@@ -51,13 +51,13 @@ class SkipGram extends BaseLMF {
       .repartition(numExecutors * numCores / numThread))
 
     try {
-      doFit(Left(sent))
+      doFit(sent)
     } finally {
       sent.unpersist()
     }
   }
 
-  override protected def pairsFromSeq(sent: RDD[Array[Long]], partitioner1: Partitioner, partitioner2: Partitioner, seed: Long): RDD[LongPairMulti] = {
+  override protected def pairs(sent: RDD[Array[Long]], partitioner1: Partitioner, partitioner2: Partitioner, seed: Long): RDD[LongPairMulti] = {
     sent.mapPartitionsWithIndex({ case (idx, it) =>
       new BatchedGenerator({
         if (samplingMode == SamplingMode.ITEM2VEC) {
@@ -70,11 +70,11 @@ class SkipGram extends BaseLMF {
           assert(false)
           null
         }
-      }, partitioner1.getNumPartitions, false).asScala
+      }, partitioner1.getNumPartitions, false, false).asScala
     })
   }
 
-  override protected def initializeFromSeq(sent: RDD[Array[Long]]): RDD[ItemData] = {
+  override protected def initialize(sent: RDD[Array[Long]]): RDD[ItemData] = {
     var r = sent.flatMap(identity(_)).map(_ -> 1L)
       .reduceByKey(_ + _).filter(_._2 >= minCount)
       .mapPartitions { it =>

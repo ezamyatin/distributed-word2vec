@@ -20,7 +20,7 @@ import scala.util.Try
 /**
  * @author ezamyatin
  * */
-class LMF extends BaseLMF {
+class LMF extends BaseLMF[(Long, Long, Float)] {
 
   private var minUserCount: Int = 1
   private var minItemCount: Int = 1
@@ -59,20 +59,21 @@ class LMF extends BaseLMF {
       .repartition(numExecutors * numCores / numThread))
 
     try {
-      doFit(Right(sent))
+      doFit(sent)
     } finally {
       sent.unpersist()
     }
   }
 
-  override protected def pairsFromRat(sent: RDD[(Long, Long, Float)], partitioner1: Partitioner, partitioner2: Partitioner, seed: Long): RDD[LongPairMulti] = {
+  override protected def pairs(sent: RDD[(Long, Long, Float)], partitioner1: Partitioner, partitioner2: Partitioner, seed: Long): RDD[LongPairMulti] = {
     sent.mapPartitions(it => new BatchedGenerator(it
       .filter(e => partitioner1.getPartition(e._1) == partitioner2.getPartition(e._2))
-      .map(e => new LongPair(partitioner1.getPartition(e._1), e._1, e._2, e._3))
-      .asJava, partitioner1.getNumPartitions, true).asScala)
+      .map(e => new LongPair(partitioner1.getPartition(e._1), e._1, e._2,
+        if (!useImplicitPref) e._3 else Float.NaN, if (useImplicitPref) e._3 else Float.NaN))
+      .asJava, partitioner1.getNumPartitions, !useImplicitPref, implicitPref).asScala)
   }
 
-  override protected def initializeFromRat(sent: RDD[(Long, Long, Float)]): RDD[ItemData] = {
+  override protected def initialize(sent: RDD[(Long, Long, Float)]): RDD[ItemData] = {
     sent.flatMap(e => Seq((ItemData.TYPE_LEFT, e._1) -> 1L, (ItemData.TYPE_RIGHT, e._2) -> 1L))
       .reduceByKey(_ + _).filter(e => if (e._1._1 == ItemData.TYPE_LEFT) e._2 >= minUserCount else e._2 >= minItemCount)
       .mapPartitions { it =>
