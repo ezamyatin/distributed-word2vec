@@ -187,35 +187,43 @@ public class Optimizer {
         return f;
     }
 
-    private static void shuffle(long[] l, long[] r, @Nullable float[] w, Random rnd) {
+    private static void shuffle(LongPairMulti batch, Random rnd) {
         int i = 0;
-        int n = l.length;
+        int n = batch.label.length;
         long t;
         float t1;
 
         while (i < n - 1) {
             int j = i + rnd.nextInt(n - i);
-            t = l[j];
-            l[j] = l[i];
-            l[i] = t;
+            t = batch.left[j];
+            batch.left[j] = batch.left[i];
+            batch.left[i] = t;
 
-            t = r[j];
-            r[j] = r[i];
-            r[i] = t;
+            t = batch.right[j];
+            batch.right[j] = batch.right[i];
+            batch.right[i] = t;
 
-            if (w != null) {
-                t1 = w[j];
-                w[j] = w[i];
-                w[i] = t1;
+            if (batch.label != null) {
+                t1 = batch.label[j];
+                batch.label[j] = batch.label[i];
+                batch.label[i] = t1;
+            }
+
+            if (batch.weight != null) {
+                t1 = batch.weight[j];
+                batch.weight[j] = batch.weight[i];
+                batch.weight[i] = t1;
             }
 
             i += 1;
         }
     }
 
-    private void optimizeImplicitBatchRemapped(long[] l, long[] r, @Nullable float[] w) {
-        assert l.length == r.length;
-        shuffle(l, r, w, random);
+    private void optimizeImplicitBatchRemapped(LongPairMulti batch) {
+        assert batch.left.length == batch.right.length;
+        assert batch.label == null;
+
+        shuffle(batch, random);
 
         double lloss = 0.0;
         double llossReg = 0.0;
@@ -227,9 +235,9 @@ public class Optimizer {
         float[] neu1e = new float[opts.vectorSize()];
         ExpTable expTable = ExpTable.getInstance();
 
-        while (pos < l.length) {
-            lastWord = (int)l[pos];
-            word = (int)r[pos];
+        while (pos < batch.left.length) {
+            lastWord = (int)batch.left[pos];
+            word = (int)batch.right[pos];
 
             if (word != -1 && lastWord != -1) {
                 int l1 = lastWord * opts.vectorSize();
@@ -243,20 +251,20 @@ public class Optimizer {
                     if (d == 0) {
                         target = word;
                         label = 1;
-                        weight = w == null ? 1f : w[pos];
+                        weight = batch.weight == null ? 1f : batch.weight[pos];
                     } else {
                         if (unigramTable != null) {
                             target = unigramTable[random.nextInt(unigramTable.length)];
-                            while (target == -1 || l[pos] == i2R[target]) {
+                            while (target == -1 || batch.left[pos] == i2R[target]) {
                                 target = unigramTable[random.nextInt(unigramTable.length)];
                             }
                         } else {
                             target = random.nextInt(vocabR.size());
-                            while (l[pos] == i2R[target]) {
+                            while (batch.left[pos] == i2R[target]) {
                                 target = random.nextInt(vocabR.size());
                             }
                         }
-                        weight = opts.gamma;
+                        weight = batch.weight == null ? opts.gamma : (batch.weight[pos] * opts.gamma);
                         label = 0;
                     }
                     int l2 = target * opts.vectorSize();
@@ -309,9 +317,11 @@ public class Optimizer {
         lossnReg.addAndGet(llossnReg);
     }
 
-    private void optimizeExplicitBatchRemapped(long[] l, long[] r, float[] rating) {
-        assert l.length == r.length;
-        shuffle(l, r, rating, random);
+    private void optimizeExplicitBatchRemapped(LongPairMulti batch) {
+        assert batch.left.length == batch.right.length;
+        assert Float.isNaN(opts.gamma);
+
+        shuffle(batch, random);
 
         double lloss = 0.0;
         double llossReg = 0.0;
@@ -323,15 +333,17 @@ public class Optimizer {
         float[] neu1e = new float[opts.vectorSize()];
         ExpTable expTable = ExpTable.getInstance();
 
-        while (pos < l.length) {
-            lastWord = (int)l[pos];
-            word = (int)r[pos];
+        while (pos < batch.left.length) {
+            lastWord = (int)batch.left[pos];
+            word = (int)batch.right[pos];
 
             if (word != -1 && lastWord != -1) {
                 Arrays.fill(neu1e, 0);
-                int l1 = lastWord * opts.vectorSize();
-                int l2 = word * opts.vectorSize();
-                float label = rating[pos];
+                final int l1 = lastWord * opts.vectorSize();
+                final int l2 = word * opts.vectorSize();
+                final float label = batch.label[pos];
+                final float weight = batch.weight == null ? 1f : batch.weight[pos];
+
                 assert label == 0.0 || label == 1.0;
 
                 float f = blas.sdot(opts.dim, syn0, l1, 1, syn1neg, l2, 1);
@@ -341,10 +353,10 @@ public class Optimizer {
                 }
 
                 float sigm = expTable.sigmoid(f);
-                float g = (float)((label - sigm) * opts.lr);
+                float g = (float)((label - sigm) * opts.lr * weight);
 
                 if (opts.verbose) {
-                    lloss += expTable.logloss(f, label);
+                    lloss += expTable.logloss(f, label) * weight;
                     llossn += 1;
 
                     if (opts.lambda > 0 && label > 0) {
@@ -381,7 +393,7 @@ public class Optimizer {
     }
 
     public void optimize(Iterator<LongPairMulti> data, int cpus) {
-        ParItr.foreach(new Iterator<LongPairMulti>() {
+        Iterator<LongPairMulti> remapped = new Iterator<LongPairMulti>() {
             @Override
             public boolean hasNext() {
                 return data.hasNext();
@@ -391,9 +403,13 @@ public class Optimizer {
             public LongPairMulti next() {
                 return data.next().remap(vocabL, vocabR);
             }
-        }, cpus, opts.implicit ?
-                t -> this.optimizeImplicitBatchRemapped(t.left, t.right, t.rating) :
-                t -> this.optimizeExplicitBatchRemapped(t.left, t.right, t.rating));
+        };
+
+        if (cpus == 1) {
+            remapped.forEachRemaining(opts.implicit ? this::optimizeImplicitBatchRemapped : this::optimizeExplicitBatchRemapped);
+        } else {
+            ParItr.foreach(remapped, cpus, opts.implicit ? this::optimizeImplicitBatchRemapped : this::optimizeExplicitBatchRemapped);
+        }
     }
 
     public Iterator<ItemData> flush() {

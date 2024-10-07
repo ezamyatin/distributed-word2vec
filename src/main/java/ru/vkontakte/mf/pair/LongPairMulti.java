@@ -16,7 +16,9 @@ public class LongPairMulti implements Serializable {
 
     public final long[] right;
 
-    public final float[] rating;
+    public final float[] label;
+
+    public final float[] weight;
 
     public LongPairMulti remap(Long2IntOpenHashMap vocabL, Long2IntOpenHashMap vocabR) {
         for (int i = 0; i < left.length; i++) {
@@ -26,10 +28,11 @@ public class LongPairMulti implements Serializable {
         return this;
     }
 
-    public LongPairMulti(int part, long[] left, long[] right, @Nullable float[] rating) {
+    public LongPairMulti(int part, long[] left, long[] right, @Nullable float[] label, @Nullable float[] weight) {
         this.part = part;
         this.left = left;
         this.right = right;
-        this.rating = rating;
+        this.label = label;
+        this.weight = weight;
     }
 }

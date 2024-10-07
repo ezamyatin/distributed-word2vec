@@ -18,31 +18,41 @@ public class BatchedGenerator implements Iterator<LongPairMulti>, Serializable {
     private final Iterator<LongPair> pairGenerator;
     private final int batchSize;
 
-    private final LongArrayList[] l, r;
-    private final FloatArrayList[] w;
+    private final LongArrayList[] left, right;
+    private final FloatArrayList[] label, weight;
 
     private int nonEmptyCounter = 0;
     private int ptr = 0;
 
     public BatchedGenerator(Iterator<LongPair> pairGenerator,
                             int numPartitions,
-                            boolean withRating) {
+                            boolean withLabel,
+                            boolean withWeight) {
         this.pairGenerator = pairGenerator;
 
-        l = new LongArrayList[numPartitions];
-        r = new LongArrayList[numPartitions];
-        if (withRating) {
-            w = new FloatArrayList[numPartitions];
+        left = new LongArrayList[numPartitions];
+        right = new LongArrayList[numPartitions];
+        if (withLabel) {
+            label = new FloatArrayList[numPartitions];
         } else {
-            w = null;
+            label = null;
+        }
+
+        if (withWeight) {
+            weight = new FloatArrayList[numPartitions];
+        } else {
+            weight = null;
         }
 
         this.batchSize = TOTAL_BATCH_SIZE / numPartitions;
         for (int i = 0; i < numPartitions; ++i) {
-            l[i] = new LongArrayList(batchSize);
-            r[i] = new LongArrayList(batchSize);
-            if (w != null) {
-                w[i] = new FloatArrayList(batchSize);
+            left[i] = new LongArrayList(batchSize);
+            right[i] = new LongArrayList(batchSize);
+            if (label != null) {
+                label[i] = new FloatArrayList(batchSize);
+            }
+            if (weight != null) {
+                weight[i] = new FloatArrayList(batchSize);
             }
         }
     }
@@ -58,40 +68,53 @@ public class BatchedGenerator implements Iterator<LongPairMulti>, Serializable {
             LongPair pair = pairGenerator.next();
             int part = pair.part;
 
-            if (l[part].isEmpty()) {
+            if (left[part].isEmpty()) {
                 nonEmptyCounter += 1;
             }
 
-            l[part].add(pair.left);
-            r[part].add(pair.right);
-            if (w != null) {
-                w[part].add(pair.rating);
+            left[part].add(pair.left);
+            right[part].add(pair.right);
+
+            if (label != null) {
+                label[part].add(pair.label);
             }
 
-            if (l[part].size() >= batchSize) {
-                LongPairMulti result = new LongPairMulti(part, l[part].toLongArray(), r[part].toLongArray(),
-                        w == null ? null : w[part].toFloatArray());
-                l[part].clear();
-                r[part].clear();
-                if (w != null) {
-                    w[part].clear();
+            if (weight != null) {
+                weight[part].add(pair.weight);
+            }
+
+            if (left[part].size() >= batchSize) {
+                LongPairMulti result = new LongPairMulti(part, left[part].toLongArray(), right[part].toLongArray(),
+                        label == null ? null : label[part].toFloatArray(),
+                        weight == null ? null : weight[part].toFloatArray());
+                left[part].clear();
+                right[part].clear();
+                if (label != null) {
+                    label[part].clear();
+                }
+                if (weight != null) {
+                    weight[part].clear();
                 }
                 nonEmptyCounter -= 1;
                 return result;
             }
         }
 
-        while (ptr < l.length && l[ptr].isEmpty()) {
+        while (ptr < left.length && left[ptr].isEmpty()) {
             ptr += 1;
         }
 
-        if (ptr < l.length) {
-            LongPairMulti result = new LongPairMulti(ptr, l[ptr].toLongArray(), r[ptr].toLongArray(),
-                    w == null ? null : w[ptr].toFloatArray());
-            l[ptr].clear();
-            r[ptr].clear();
-            if (w != null) {
-                w[ptr].clear();
+        if (ptr < left.length) {
+            LongPairMulti result = new LongPairMulti(ptr, left[ptr].toLongArray(), right[ptr].toLongArray(),
+                    label == null ? null : label[ptr].toFloatArray(),
+                    weight == null ? null : weight[ptr].toFloatArray());
+            left[ptr].clear();
+            right[ptr].clear();
+            if (label != null) {
+                label[ptr].clear();
+            }
+            if (weight != null) {
+                weight[ptr].clear();
             }
             nonEmptyCounter -= 1;
             return result;
