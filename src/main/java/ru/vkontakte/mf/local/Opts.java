@@ -15,8 +15,9 @@ public class Opts implements Serializable {
     public final double lambda;
     public final float gamma;
     public final boolean implicit;
+    public final boolean verbose;
 
-    public Opts(int dim, boolean useBias, int negative, double pow, double lr, double lambda, float gamma, boolean implicit) {
+    public Opts(int dim, boolean useBias, int negative, double pow, double lr, double lambda, float gamma, boolean implicit, boolean verbose) {
         this.dim = dim;
         this.useBias = useBias;
         this.negative = negative;
@@ -25,6 +26,7 @@ public class Opts implements Serializable {
         this.lambda = lambda;
         this.gamma = gamma;
         this.implicit = implicit;
+        this.verbose = verbose;
     }
 
     public int vectorSize() {

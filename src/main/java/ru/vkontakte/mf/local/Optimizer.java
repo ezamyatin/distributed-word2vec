@@ -267,15 +267,17 @@ public class Optimizer {
                     }
 
                     float sigm = expTable.sigmoid(f);
-                    lloss += expTable.logloss(f, label) * weight;
-                    llossn += 1;
-
                     float g = (float)((label - sigm) * opts.lr * weight);
 
-                    if (opts.lambda > 0 && label > 0) {
-                        llossReg += opts.lambda * blas.sdot(opts.dim, syn0, l1, 1, syn0, l1, 1);
-                        llossReg += opts.lambda * blas.sdot(opts.dim, syn1neg, l2, 1, syn1neg, l2, 1);
-                        llossnReg += 1;
+                    if (opts.verbose) {
+                        lloss += expTable.logloss(f, label) * weight;
+                        llossn += 1;
+
+                        if (opts.lambda > 0 && label > 0) {
+                            llossReg += opts.lambda * blas.sdot(opts.dim, syn0, l1, 1, syn0, l1, 1);
+                            llossReg += opts.lambda * blas.sdot(opts.dim, syn1neg, l2, 1, syn1neg, l2, 1);
+                            llossnReg += 1;
+                        }
                     }
 
                     if (opts.lambda > 0 && label > 0) {
@@ -339,15 +341,17 @@ public class Optimizer {
                 }
 
                 float sigm = expTable.sigmoid(f);
-                lloss += expTable.logloss(f, label);
-                llossn += 1;
-
                 float g = (float)((label - sigm) * opts.lr);
 
-                if (opts.lambda > 0 && label > 0) {
-                    llossReg += opts.lambda * blas.sdot(opts.dim, syn0, l1, 1, syn0, l1, 1);
-                    llossReg += opts.lambda * blas.sdot(opts.dim, syn1neg, l2, 1, syn1neg, l2, 1);
-                    llossnReg += 1;
+                if (opts.verbose) {
+                    lloss += expTable.logloss(f, label);
+                    llossn += 1;
+
+                    if (opts.lambda > 0 && label > 0) {
+                        llossReg += opts.lambda * blas.sdot(opts.dim, syn0, l1, 1, syn0, l1, 1);
+                        llossReg += opts.lambda * blas.sdot(opts.dim, syn1neg, l2, 1, syn1neg, l2, 1);
+                        llossnReg += 1;
+                    }
                 }
 
                 if (opts.lambda > 0 && label > 0) {
