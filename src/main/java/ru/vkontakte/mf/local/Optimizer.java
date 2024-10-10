@@ -189,7 +189,7 @@ public class Optimizer {
 
     private static void shuffle(LongPairMulti batch, Random rnd) {
         int i = 0;
-        int n = batch.label.length;
+        int n = batch.left.length;
         long t;
         float t1;
 
