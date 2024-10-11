@@ -48,7 +48,7 @@ private[distributed] abstract class BaseLMF[T] extends Serializable with Logging
   def setLearningRate(learningRate: Double): this.type = {
     require(learningRate > 0,
       s"Initial learning rate must be positive but got ${learningRate}")
-    this.learningRate = learningRate
+    this.learningRate = learningRate.toFloat
     this
   }
 
