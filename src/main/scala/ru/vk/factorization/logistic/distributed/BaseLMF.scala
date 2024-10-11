@@ -19,7 +19,7 @@ import scala.util.Try
 
 /**
  * @author ezamyatin
- * */
+ */
 private[distributed] abstract class BaseLMF[T] extends Serializable with Logging {
 
   protected var dotVectorSize: Int = 100

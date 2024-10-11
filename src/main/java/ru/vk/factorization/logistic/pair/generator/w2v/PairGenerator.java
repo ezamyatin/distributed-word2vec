@@ -10,7 +10,7 @@ import java.util.Iterator;
 
 /**
  * @author ezamyatin
- **/
+ */
 
 public abstract class PairGenerator extends UntilNullIterator<LongPair> implements Serializable {
 

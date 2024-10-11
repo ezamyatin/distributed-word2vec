@@ -5,7 +5,7 @@ import java.util.List;
 
 /**
  * @author ezamyatin
- **/
+ */
 public class ItemData implements Serializable {
     final public static boolean TYPE_LEFT = false;
     final public static boolean TYPE_RIGHT = true;

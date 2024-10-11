@@ -11,7 +11,7 @@ import java.util.NoSuchElementException;
 
 /**
  * @author ezamyatin
- **/
+ */
 public class BatchedGenerator implements Iterator<LongPairMulti>, Serializable {
     private final int TOTAL_BATCH_SIZE = 10000000;
 

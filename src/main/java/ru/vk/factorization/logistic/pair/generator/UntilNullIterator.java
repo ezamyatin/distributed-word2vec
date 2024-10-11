@@ -6,8 +6,8 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
- * @author zamyatin-evg
- **/
+ * @author ezamyatin
+ */
 public abstract class UntilNullIterator<T> implements Iterator<T>, Serializable {
     private T next = null;
 

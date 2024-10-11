@@ -9,7 +9,7 @@ import java.util.Iterator;
 
 /**
  * @author ezamyatin
- **/
+ */
 public class WindowGenerator extends PairGenerator {
     private final int window;
     private final IntArrayList p1, p2;

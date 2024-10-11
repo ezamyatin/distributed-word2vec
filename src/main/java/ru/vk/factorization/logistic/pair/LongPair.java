@@ -4,7 +4,7 @@ import java.io.Serializable;
 
 /**
  * @author ezamyatin
- **/
+ */
 public class LongPair implements Serializable {
     public final static float EMPTY = Float.NaN;
 

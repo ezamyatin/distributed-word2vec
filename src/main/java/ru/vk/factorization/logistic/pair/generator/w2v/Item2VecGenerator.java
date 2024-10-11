@@ -10,7 +10,7 @@ import java.util.Random;
 
 /**
  * @author ezamyatin
- **/
+ */
 public class Item2VecGenerator extends PairGenerator {
     private final int window;
     private final Random random;

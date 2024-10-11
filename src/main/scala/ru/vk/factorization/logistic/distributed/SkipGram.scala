@@ -12,7 +12,7 @@ import scala.jdk.CollectionConverters.{asJavaIteratorConverter, asScalaIteratorC
 
 /**
  * @author ezamyatin
- * */
+ */
 class SkipGram extends BaseLMF[Array[Long]] {
 
   private var minCount: Int = 1

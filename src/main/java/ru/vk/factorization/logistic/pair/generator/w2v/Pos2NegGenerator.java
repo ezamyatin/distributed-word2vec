@@ -10,7 +10,7 @@ import java.util.Random;
 
 /**
  * @author ezamyatin
- **/
+ */
 public class Pos2NegGenerator extends PairGenerator {
     private final int window;
     private final Random random;

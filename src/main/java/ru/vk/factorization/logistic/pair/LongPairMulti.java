@@ -7,7 +7,7 @@ import java.io.Serializable;
 
 /**
  * @author ezamyatin
- **/
+ */
 public class LongPairMulti implements Serializable {
 
     public final int part;

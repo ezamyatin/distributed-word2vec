@@ -6,7 +6,7 @@ import java.util.stream.IntStream;
 
 /**
  * @author ezamyatin
- **/
+ */
 public abstract class Partitioner implements Serializable {
     final static int PART_TABLE_TOTAL_SIZE = 10000000;
 

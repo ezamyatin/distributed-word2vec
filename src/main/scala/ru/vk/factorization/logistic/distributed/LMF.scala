@@ -19,7 +19,7 @@ import scala.util.Try
 
 /**
  * @author ezamyatin
- * */
+ */
 class LMF extends BaseLMF[(Long, Long, Float)] {
 
   private var minUserCount: Int = 1
