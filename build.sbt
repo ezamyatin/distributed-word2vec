@@ -1,6 +1,7 @@
 lazy val root = (project in file("."))
   .settings(
     name := "distributed-word2vec",
+    organization := "com.github.ezamyatin",
     version := "1.0",
     scalaVersion := "2.12.8",
   )
