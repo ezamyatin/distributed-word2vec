@@ -25,12 +25,11 @@ private[distributed] abstract class BaseLMF[T] extends Serializable with Logging
   protected var dotVectorSize: Int = 100
   protected var negative: Int = 5
   private var numIterations: Int = 1
-  private var learningRate: Double = 0.025
-  private var minLearningRate: Option[Double] = None
+  private var learningRate: Float = 0.025f
   protected var numThread: Int = 1
   private var numPartitions: Int = 1
-  private var pow: Double = 0
-  private var lambda: Double = 0
+  private var pow: Float = 0f
+  private var lambda: Float = 0f
   protected var useBias: Boolean = false
   protected var intermediateRDDStorageLevel: StorageLevel = StorageLevel.MEMORY_AND_DISK
   protected var checkpointPath: String = _
@@ -50,13 +49,6 @@ private[distributed] abstract class BaseLMF[T] extends Serializable with Logging
     require(learningRate > 0,
       s"Initial learning rate must be positive but got ${learningRate}")
     this.learningRate = learningRate
-    this
-  }
-
-  def setMinLearningRate(minLearningRate: Option[Double]): this.type = {
-    require(minLearningRate.forall(_ > 0),
-      s"Initial learning rate must be positive but got ${minLearningRate}")
-    this.minLearningRate = minLearningRate
     this
   }
 
@@ -92,14 +84,14 @@ private[distributed] abstract class BaseLMF[T] extends Serializable with Logging
   def setPow(pow: Double): this.type = {
     require(pow >= 0,
       s"Pow must be positive but got ${pow}")
-    this.pow = pow
+    this.pow = pow.toFloat
     this
   }
 
   def setLambda(lambda: Double): this.type = {
     require(lambda >= 0,
       s"Lambda must be positive but got ${lambda}")
-    this.lambda = lambda
+    this.lambda = lambda.toFloat
     this
   }
 
@@ -152,9 +144,9 @@ private[distributed] abstract class BaseLMF[T] extends Serializable with Logging
   }
 
   protected def pairs(sent: RDD[T],
-                             partitioner1: Partitioner,
-                             partitioner2: Partitioner,
-                             seed: Long): RDD[LongPairMulti]
+                      partitioner1: Partitioner,
+                      partitioner2: Partitioner,
+                      seed: Long): RDD[LongPairMulti]
 
   protected def initialize(sent: RDD[T]): RDD[ItemData]
 
@@ -189,9 +181,6 @@ private[distributed] abstract class BaseLMF[T] extends Serializable with Logging
       }
 
       ((if (curEpoch == startEpoch) startIter else 0) until numPartitions).foreach { pI =>
-        val progress = (1.0 * curEpoch.toDouble * numPartitions + pI) / (numIterations * numPartitions)
-
-        val curLearningRate = minLearningRate.fold(learningRate)(e => Math.exp(Math.log(learningRate) - (Math.log(learningRate) - Math.log(e)) * progress))
         val partitioner2 = new Partitioner {
           override def getPartition(item: Long): Int = {
             val bucket = Partitioner.hash(item, curEpoch, partitionTable.value.length)
@@ -213,17 +202,25 @@ private[distributed] abstract class BaseLMF[T] extends Serializable with Logging
 
         emb = cur.zipPartitions(embLR) { case (sIt, eItLR) =>
           val opts = if (implicitPref) {
-            Opts.`implicit`(dotVectorSize, useBias, negative, pow, curLearningRate, lambda, gamma, false)
+            Opts.`implicit`(dotVectorSize, useBias, negative, pow, learningRate, lambda, gamma, false)
           } else {
-            Opts.explicit(dotVectorSize, useBias, negative, pow, curLearningRate, lambda, false)
+            Opts.explicit(dotVectorSize, useBias, learningRate, lambda, false)
           }
 
+          var time = System.currentTimeMillis()
+          println("loading...")
           val sg = new Optimizer(opts, eItLR.asJava)
-
+          println(s"loaded in ${(System.currentTimeMillis() - time) / 1000} seconds. optimizing...")
+          time = System.currentTimeMillis()
           sg.optimize(sIt.asJava, numThread)
 
-          println("LOSS: " + sg.loss.doubleValue() / sg.lossn.longValue() + " (" + sg.loss.doubleValue() + " / " + sg.lossn.longValue() + ")" + "\t"  +
-            sg.lossReg.doubleValue() / sg.lossnReg.longValue() + " (" + sg.lossReg.doubleValue() + " / " + sg.lossnReg.longValue() + ")")
+          if (opts.verbose) {
+            println("LOSS: " + sg.loss.doubleValue() / sg.lossn.longValue() + " (" + sg.loss.doubleValue() + " / " + sg.lossn.longValue() + ")" + "\t" +
+              sg.lossReg.doubleValue() / sg.lossnReg.longValue() + " (" + sg.lossReg.doubleValue() + " / " + sg.lossnReg.longValue() + ")")
+          }
+
+          time = System.currentTimeMillis()
+          println(s"optimized in ${(System.currentTimeMillis() - time) / 1000} seconds. flushing...")
 
           sg.flush().asScala
         }.persist(intermediateRDDStorageLevel)
