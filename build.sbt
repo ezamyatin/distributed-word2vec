@@ -1,8 +1,8 @@
 lazy val root = (project in file("."))
   .settings(
-    name := "distributeed-word2vec",
+    name := "distributed-word2vec",
     version := "1.0",
-    scalaVersion := "2.12.19",
+    scalaVersion := "2.12.8",
   )
 
 libraryDependencies ++= Seq(
@@ -12,7 +12,8 @@ libraryDependencies ++= Seq(
   "it.unimi.dsi" % "fastutil" % "8.5.8",
   "com.github.fommil.netlib" % "all" % "1.1.2",
   "com.github.fommil.netlib" % "core" % "1.1.2",
-  "com.github.fommil.netlib" % "netlib-native_system-linux-x86_64" % "1.1"
+  "com.github.fommil.netlib" % "netlib-native_system-linux-x86_64" % "1.1",
+  "com.github.scopt" %% "scopt" % "3.5.0",
 )
 
 fork in Test := true
