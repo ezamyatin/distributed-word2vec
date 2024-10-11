@@ -1,4 +1,4 @@
-package ru.vkontakte.mf.pair;
+package ru.vk.factorization.logistic.pair;
 
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 

@@ -1,4 +1,4 @@
-package ru.vkontakte.mf.pair;
+package ru.vk.factorization.logistic.pair;
 
 import java.io.Serializable;
 import java.util.Random;

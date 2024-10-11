@@ -1,4 +1,4 @@
-package ru.vkontakte.mf.local;
+package ru.vk.factorization.logistic.local;
 
 
 import java.io.Serializable;

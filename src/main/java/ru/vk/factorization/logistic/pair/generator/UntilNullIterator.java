@@ -1,4 +1,4 @@
-package ru.vkontakte.mf.pair.generator;
+package ru.vk.factorization.logistic.pair.generator;
 
 import javax.annotation.Nullable;
 import java.io.Serializable;

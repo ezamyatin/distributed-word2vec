@@ -1,11 +1,11 @@
-package ru.vkontakte.mf.distributed
+package ru.vk.factorization.logistic.distributed
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
-import ru.vkontakte.mf.local.{ItemData, Optimizer}
-import ru.vkontakte.mf.pair.generator.BatchedGenerator
-import ru.vkontakte.mf.pair.{LongPairMulti, Partitioner}
-import ru.vkontakte.mf.pair.generator.w2v.{Item2VecGenerator, Pos2NegGenerator, SamplingMode, WindowGenerator}
+import ru.vk.factorization.logistic.local.{ItemData, Optimizer}
+import ru.vk.factorization.logistic.pair.{LongPairMulti, Partitioner}
+import ru.vk.factorization.logistic.pair.generator.BatchedGenerator
+import ru.vk.factorization.logistic.pair.generator.w2v.{Item2VecGenerator, Pos2NegGenerator, SamplingMode, WindowGenerator}
 
 import java.util.Random
 import scala.jdk.CollectionConverters.{asJavaIteratorConverter, asScalaIteratorConverter}

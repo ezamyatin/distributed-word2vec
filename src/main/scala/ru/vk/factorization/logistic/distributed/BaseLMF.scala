@@ -1,4 +1,4 @@
-package ru.vkontakte.mf.distributed
+package ru.vk.factorization.logistic.distributed
 
 import org.apache.spark.{HashPartitioner, SparkContext}
 import org.apache.spark.internal.Logging
@@ -7,10 +7,10 @@ import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode}
 import org.apache.spark.storage.StorageLevel
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
-import ru.vkontakte.mf.local.{ItemData, Optimizer, Opts}
-import ru.vkontakte.mf.pair.generator.BatchedGenerator
-import ru.vkontakte.mf.pair.{LongPair, LongPairMulti, Partitioner}
-import ru.vkontakte.mf.pair.generator.w2v.{Item2VecGenerator, Pos2NegGenerator, SamplingMode}
+import ru.vk.factorization.logistic.local.{ItemData, Optimizer, Opts}
+import ru.vk.factorization.logistic.pair.generator.BatchedGenerator
+import ru.vk.factorization.logistic.pair.generator.w2v.{Item2VecGenerator, Pos2NegGenerator, SamplingMode}
+import ru.vk.factorization.logistic.pair.{LongPair, LongPairMulti, Partitioner}
 
 import java.util.Random
 import scala.collection.mutable.ArrayBuffer

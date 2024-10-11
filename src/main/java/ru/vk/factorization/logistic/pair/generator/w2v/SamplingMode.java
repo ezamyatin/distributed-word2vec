@@ -1,4 +1,4 @@
-package ru.vkontakte.mf.pair.generator.w2v;
+package ru.vk.factorization.logistic.pair.generator.w2v;
 
 /**
  * @author ezamyatin
