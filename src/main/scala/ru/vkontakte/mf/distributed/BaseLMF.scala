@@ -218,8 +218,6 @@ private[distributed] abstract class BaseLMF[T] extends Serializable with Logging
             println("LOSS: " + sg.loss.doubleValue() / sg.lossn.longValue() + " (" + sg.loss.doubleValue() + " / " + sg.lossn.longValue() + ")" + "\t" +
               sg.lossReg.doubleValue() / sg.lossnReg.longValue() + " (" + sg.lossReg.doubleValue() + " / " + sg.lossnReg.longValue() + ")")
           }
-
-          time = System.currentTimeMillis()
           println(s"optimized in ${(System.currentTimeMillis() - time) / 1000} seconds. flushing...")
 
           sg.flush().asScala
