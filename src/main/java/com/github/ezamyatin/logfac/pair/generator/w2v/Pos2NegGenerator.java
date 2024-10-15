@@ -1,9 +1,9 @@
-package ru.vk.factorization.logistic.pair.generator.w2v;
+package com.github.ezamyatin.logfac.pair.generator.w2v;
 
+import com.github.ezamyatin.logfac.pair.LongPair;
+import com.github.ezamyatin.logfac.pair.Partitioner;
+import com.github.ezamyatin.logfac.pair.generator.UntilNullIterator;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
-import ru.vk.factorization.logistic.pair.Partitioner;
-import ru.vk.factorization.logistic.pair.generator.UntilNullIterator;
-import ru.vk.factorization.logistic.pair.LongPair;
 
 import java.util.Iterator;
 import java.util.Random;

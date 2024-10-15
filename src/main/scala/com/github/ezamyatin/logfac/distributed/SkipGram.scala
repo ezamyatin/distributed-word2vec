@@ -1,11 +1,11 @@
-package ru.vk.factorization.logistic.distributed
+package com.github.ezamyatin.logfac.distributed
 
+import com.github.ezamyatin.logfac.local.{ItemData, Optimizer}
+import com.github.ezamyatin.logfac.pair.{LongPairMulti, Partitioner}
+import com.github.ezamyatin.logfac.pair.generator.BatchedGenerator
+import com.github.ezamyatin.logfac.pair.generator.w2v.{Item2VecGenerator, Pos2NegGenerator, SamplingMode, WindowGenerator}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
-import ru.vk.factorization.logistic.local.{ItemData, Optimizer}
-import ru.vk.factorization.logistic.pair.{LongPairMulti, Partitioner}
-import ru.vk.factorization.logistic.pair.generator.BatchedGenerator
-import ru.vk.factorization.logistic.pair.generator.w2v.{Item2VecGenerator, Pos2NegGenerator, SamplingMode, WindowGenerator}
 
 import java.util.Random
 import scala.jdk.CollectionConverters.{asJavaIteratorConverter, asScalaIteratorConverter}

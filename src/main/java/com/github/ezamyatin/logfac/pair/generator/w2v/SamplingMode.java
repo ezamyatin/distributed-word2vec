@@ -1,4 +1,4 @@
-package ru.vk.factorization.logistic.pair.generator.w2v;
+package com.github.ezamyatin.logfac.pair.generator.w2v;
 
 /**
  * @author ezamyatin

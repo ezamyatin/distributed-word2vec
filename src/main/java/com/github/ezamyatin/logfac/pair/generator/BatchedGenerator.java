@@ -1,9 +1,9 @@
-package ru.vk.factorization.logistic.pair.generator;
+package com.github.ezamyatin.logfac.pair.generator;
 
+import com.github.ezamyatin.logfac.pair.LongPair;
+import com.github.ezamyatin.logfac.pair.LongPairMulti;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
-import ru.vk.factorization.logistic.pair.LongPairMulti;
-import ru.vk.factorization.logistic.pair.LongPair;
 
 import java.io.Serializable;
 import java.util.Iterator;

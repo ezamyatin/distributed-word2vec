@@ -1,4 +1,4 @@
-package ru.vk.factorization.logistic.pair;
+package com.github.ezamyatin.logfac.pair;
 
 import java.io.Serializable;
 import java.util.Random;

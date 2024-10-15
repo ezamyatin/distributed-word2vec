@@ -1,4 +1,4 @@
-package ru.vk.factorization.logistic.pair;
+package com.github.ezamyatin.logfac.pair;
 
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 

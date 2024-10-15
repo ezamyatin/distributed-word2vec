@@ -1,12 +1,12 @@
-package ru.vk.factorization.logistic.local;
+package com.github.ezamyatin.logfac.local;
 
+import com.github.ezamyatin.logfac.pair.LongPairMulti;
 import com.google.common.collect.Iterators;
 import com.google.common.util.concurrent.AtomicDouble;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import com.github.fommil.netlib.BLAS;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
-import ru.vk.factorization.logistic.pair.LongPairMulti;
 
 import java.util.Arrays;
 import java.util.Iterator;

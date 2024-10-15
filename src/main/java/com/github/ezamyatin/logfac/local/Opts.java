@@ -1,4 +1,4 @@
-package ru.vk.factorization.logistic.local;
+package com.github.ezamyatin.logfac.local;
 
 
 import java.io.Serializable;

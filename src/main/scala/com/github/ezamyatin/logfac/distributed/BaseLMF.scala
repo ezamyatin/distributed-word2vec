@@ -1,5 +1,9 @@
-package ru.vk.factorization.logistic.distributed
+package com.github.ezamyatin.logfac.distributed
 
+import com.github.ezamyatin.logfac.local.{ItemData, Optimizer, Opts}
+import com.github.ezamyatin.logfac.pair.{LongPair, LongPairMulti, Partitioner}
+import com.github.ezamyatin.logfac.pair.generator.BatchedGenerator
+import com.github.ezamyatin.logfac.pair.generator.w2v.{Item2VecGenerator, Pos2NegGenerator, SamplingMode}
 import org.apache.spark.{HashPartitioner, SparkContext}
 import org.apache.spark.internal.Logging
 import org.apache.spark.rdd.RDD
@@ -7,10 +11,6 @@ import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode}
 import org.apache.spark.storage.StorageLevel
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
-import ru.vk.factorization.logistic.local.{ItemData, Optimizer, Opts}
-import ru.vk.factorization.logistic.pair.generator.BatchedGenerator
-import ru.vk.factorization.logistic.pair.generator.w2v.{Item2VecGenerator, Pos2NegGenerator, SamplingMode}
-import ru.vk.factorization.logistic.pair.{LongPair, LongPairMulti, Partitioner}
 
 import java.util.Random
 import scala.collection.mutable.ArrayBuffer
@@ -168,8 +168,8 @@ private[distributed] abstract class BaseLMF[T] extends Serializable with Logging
     var emb = latest.map(x => checkpoint(null, checkpointPath + "/" + x._1 + "_" + x._2)(sparkContext))
       .getOrElse{cacheAndCount(initialize(sent))}
 
-    var checkpointIter = 0
     val (startEpoch, startIter) = latest.getOrElse((0, 0))
+    var checkpointIter = startEpoch * numPartitions + startIter
     val cached = ArrayBuffer.empty[RDD[ItemData]]
     val partitionTable = sparkContext.broadcast(Partitioner.createPartitionTable(numPartitions, new Random(0)))
 
