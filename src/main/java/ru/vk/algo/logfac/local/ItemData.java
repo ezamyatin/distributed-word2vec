@@ -1,4 +1,4 @@
-package com.github.ezamyatin.logfac.local;
+package ru.vk.algo.logfac.local;
 
 import java.io.Serializable;
 import java.util.List;

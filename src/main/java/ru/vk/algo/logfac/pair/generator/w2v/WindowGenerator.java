@@ -1,30 +1,26 @@
-package com.github.ezamyatin.logfac.pair.generator.w2v;
+package ru.vk.algo.logfac.pair.generator.w2v;
 
-import com.github.ezamyatin.logfac.pair.LongPair;
-import com.github.ezamyatin.logfac.pair.Partitioner;
-import com.github.ezamyatin.logfac.pair.generator.UntilNullIterator;
+import ru.vk.algo.logfac.pair.LongPair;
+import ru.vk.algo.logfac.pair.Partitioner;
+import ru.vk.algo.logfac.pair.generator.UntilNullIterator;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 
 import java.util.Iterator;
-import java.util.Random;
 
 /**
  * @author ezamyatin
  */
-public class Item2VecGenerator extends PairGenerator {
+public class WindowGenerator extends PairGenerator {
     private final int window;
-    private final Random random;
     private final IntArrayList p1, p2;
 
-    public Item2VecGenerator(Iterator<long[]> sent,
-                             int window,
-                             Partitioner partitioner1,
-                             Partitioner partitioner2,
-                             long seed) {
+    public WindowGenerator(Iterator<long[]> sent,
+                           int window,
+                           Partitioner partitioner1,
+                           Partitioner partitioner2) {
         super(sent, partitioner1, partitioner2);
 
         this.window = window;
-        this.random = new Random(seed);
         this.p1 = new IntArrayList(1000);
         this.p2 = new IntArrayList(1000);
     }
@@ -41,19 +37,15 @@ public class Item2VecGenerator extends PairGenerator {
 
         return new UntilNullIterator<LongPair>() {
             private int i = 0;
-            private int j = 0;
+            private int j = -window;
 
             @Override
             public LongPair generateOrNull() {
                 while (i < sent.length) {
-                    int n = Math.min(2 * window, sent.length - 1);
+                    j = Math.max(j, -i);
 
-                    while (j < n) {
-                        int c = i;
-                        while (c == i) {
-                            c = random.nextInt(sent.length);
-                        }
-
+                    while (j <= window && i + j < sent.length) {
+                        int c = i + j;
                         j += 1;
                         if (p1.getInt(i) == p2.getInt(c) && sent[i] != sent[c]) {
                             return new LongPair(p1.getInt(i), sent[i], sent[c]);
@@ -61,7 +53,7 @@ public class Item2VecGenerator extends PairGenerator {
                     }
 
                     i += 1;
-                    j = 0;
+                    j = -window;
                 }
                 return null;
             }

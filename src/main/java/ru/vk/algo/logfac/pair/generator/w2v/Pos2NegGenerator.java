@@ -1,8 +1,8 @@
-package com.github.ezamyatin.logfac.pair.generator.w2v;
+package ru.vk.algo.logfac.pair.generator.w2v;
 
-import com.github.ezamyatin.logfac.pair.LongPair;
-import com.github.ezamyatin.logfac.pair.Partitioner;
-import com.github.ezamyatin.logfac.pair.generator.UntilNullIterator;
+import ru.vk.algo.logfac.pair.LongPair;
+import ru.vk.algo.logfac.pair.Partitioner;
+import ru.vk.algo.logfac.pair.generator.UntilNullIterator;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 
 import java.util.Iterator;

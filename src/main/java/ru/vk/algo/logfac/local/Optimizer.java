@@ -1,6 +1,6 @@
-package com.github.ezamyatin.logfac.local;
+package ru.vk.algo.logfac.local;
 
-import com.github.ezamyatin.logfac.pair.LongPairMulti;
+import ru.vk.algo.logfac.pair.LongPairMulti;
 import com.google.common.collect.Iterators;
 import com.google.common.util.concurrent.AtomicDouble;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
@@ -12,7 +12,6 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.LongConsumer;
 
 /**

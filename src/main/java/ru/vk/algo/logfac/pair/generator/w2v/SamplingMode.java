@@ -1,4 +1,4 @@
-package com.github.ezamyatin.logfac.pair.generator.w2v;
+package ru.vk.algo.logfac.pair.generator.w2v;
 
 /**
  * @author ezamyatin

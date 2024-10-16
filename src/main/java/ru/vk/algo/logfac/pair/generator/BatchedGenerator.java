@@ -1,7 +1,7 @@
-package com.github.ezamyatin.logfac.pair.generator;
+package ru.vk.algo.logfac.pair.generator;
 
-import com.github.ezamyatin.logfac.pair.LongPair;
-import com.github.ezamyatin.logfac.pair.LongPairMulti;
+import ru.vk.algo.logfac.pair.LongPair;
+import ru.vk.algo.logfac.pair.LongPairMulti;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 

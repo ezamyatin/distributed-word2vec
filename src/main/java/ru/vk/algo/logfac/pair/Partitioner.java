@@ -1,4 +1,4 @@
-package com.github.ezamyatin.logfac.pair;
+package ru.vk.algo.logfac.pair;
 
 import java.io.Serializable;
 import java.util.Random;

@@ -1,4 +1,4 @@
-package com.github.ezamyatin.logfac.pair.generator;
+package ru.vk.algo.logfac.pair.generator;
 
 import javax.annotation.Nullable;
 import java.io.Serializable;

@@ -1,11 +1,11 @@
-package com.github.ezamyatin.logfac.distributed
+package ru.vk.algo.logfac.distributed
 
-import com.github.ezamyatin.logfac.local.{ItemData, Optimizer}
-import com.github.ezamyatin.logfac.pair.{LongPairMulti, Partitioner}
-import com.github.ezamyatin.logfac.pair.generator.BatchedGenerator
-import com.github.ezamyatin.logfac.pair.generator.w2v.{Item2VecGenerator, Pos2NegGenerator, SamplingMode, WindowGenerator}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
+import ru.vk.algo.logfac.local.{ItemData, Optimizer}
+import ru.vk.algo.logfac.pair.{LongPairMulti, Partitioner}
+import ru.vk.algo.logfac.pair.generator.BatchedGenerator
+import ru.vk.algo.logfac.pair.generator.w2v.{Item2VecGenerator, Pos2NegGenerator, SamplingMode, WindowGenerator}
 
 import java.util.Random
 import scala.jdk.CollectionConverters.{asJavaIteratorConverter, asScalaIteratorConverter}

@@ -1,4 +1,4 @@
-package com.github.ezamyatin.logfac.pair;
+package ru.vk.algo.logfac.pair;
 
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 
