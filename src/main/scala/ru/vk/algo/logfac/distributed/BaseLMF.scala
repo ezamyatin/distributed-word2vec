@@ -97,7 +97,7 @@ private[distributed] abstract class BaseLMF[T] extends Serializable with Logging
   }
 
   def setLambdaR(lambdaR: Double): this.type = {
-    require(lambdaL >= 0,
+    require(lambdaR >= 0,
       s"Lambda must be positive but got ${lambdaR}")
     this.lambdaR = lambdaR.toFloat
     this
