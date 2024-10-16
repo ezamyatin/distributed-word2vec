@@ -29,7 +29,8 @@ private[distributed] abstract class BaseLMF[T] extends Serializable with Logging
   protected var numThread: Int = 1
   private var numPartitions: Int = 1
   private var pow: Float = 0f
-  private var lambda: Float = 0f
+  private var lambdaL: Float = 0f
+  private var lambdaR: Float = 0f
   protected var useBias: Boolean = false
   protected var intermediateRDDStorageLevel: StorageLevel = StorageLevel.MEMORY_AND_DISK
   protected var checkpointPath: String = _
@@ -88,10 +89,17 @@ private[distributed] abstract class BaseLMF[T] extends Serializable with Logging
     this
   }
 
-  def setLambda(lambda: Double): this.type = {
-    require(lambda >= 0,
-      s"Lambda must be positive but got ${lambda}")
-    this.lambda = lambda.toFloat
+  def setLambdaL(lambdaL: Double): this.type = {
+    require(lambdaL >= 0,
+      s"Lambda must be positive but got ${lambdaL}")
+    this.lambdaL = lambdaL.toFloat
+    this
+  }
+
+  def setLambdaR(lambdaR: Double): this.type = {
+    require(lambdaL >= 0,
+      s"Lambda must be positive but got ${lambdaR}")
+    this.lambdaR = lambdaR.toFloat
     this
   }
 
@@ -202,9 +210,9 @@ private[distributed] abstract class BaseLMF[T] extends Serializable with Logging
 
         emb = cur.zipPartitions(embLR) { case (sIt, eItLR) =>
           val opts = if (implicitPref) {
-            Opts.`implicit`(dotVectorSize, useBias, negative, pow, learningRate, lambda, gamma, false)
+            Opts.`implicit`(dotVectorSize, useBias, negative, pow, learningRate, lambdaL, lambdaR, gamma, false)
           } else {
-            Opts.explicit(dotVectorSize, useBias, learningRate, lambda, false)
+            Opts.explicit(dotVectorSize, useBias, learningRate, lambdaL, lambdaR, false)
           }
 
           var time = System.currentTimeMillis()
@@ -215,8 +223,7 @@ private[distributed] abstract class BaseLMF[T] extends Serializable with Logging
           sg.optimize(sIt.asJava, numThread)
 
           if (opts.verbose) {
-            println("LOSS: " + sg.loss.doubleValue() / sg.lossn.longValue() + " (" + sg.loss.doubleValue() + " / " + sg.lossn.longValue() + ")" + "\t" +
-              sg.lossReg.doubleValue() / sg.lossnReg.longValue() + " (" + sg.lossReg.doubleValue() + " / " + sg.lossnReg.longValue() + ")")
+            println("LOSS: " + sg.loss.doubleValue() + "\t" + sg.lossReg.doubleValue())
           }
           println(s"optimized in ${(System.currentTimeMillis() - time) / 1000} seconds. flushing...")
 
