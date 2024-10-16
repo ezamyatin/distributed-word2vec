@@ -131,12 +131,14 @@ private[distributed] abstract class BaseLMF[T] extends Serializable with Logging
 
   private def checkpoint(emb: RDD[ItemData],
                  path: String)(implicit sc: SparkContext): RDD[ItemData] = {
+    import tech.ytsaurus.spyt._
+
     val sqlc = new SQLContext(sc)
     import sqlc.implicits._
     if (emb != null) {
       emb.map(itemData => (itemData.`type`, itemData.id, itemData.cn, itemData.f))
         .toDF("type", "id", "cn", "f")
-        .write.mode(SaveMode.Overwrite).parquet(path)
+        .write.mode(SaveMode.Overwrite).yt(path)
       emb.unpersist()
     }
 
@@ -147,8 +149,10 @@ private[distributed] abstract class BaseLMF[T] extends Serializable with Logging
   }
 
   private def listFiles(path: String): Array[String] = {
-    val hdfs = FileSystem.get(new Configuration())
-    Try(hdfs.listStatus(new Path(path)).map(_.getPath.getName)).getOrElse(Array.empty)
+    import tech.ytsaurus.spyt._
+    import scala.collection.JavaConverters._
+
+    yt.listNode(path).get().asList().asScala.map(_.stringValue()).toArray
   }
 
   protected def pairs(sent: RDD[T],
