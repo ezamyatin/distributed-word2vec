@@ -14,4 +14,5 @@ libraryDependencies ++= Seq(
   "com.github.fommil.netlib" % "all" % "1.1.2",
   "com.github.fommil.netlib" % "core" % "1.1.2",
   "com.github.fommil.netlib" % "netlib-native_system-linux-x86_64" % "1.1",
+  "tech.ytsaurus" % "spark-yt-data-source_2.12" % "1.78.0",
 )
