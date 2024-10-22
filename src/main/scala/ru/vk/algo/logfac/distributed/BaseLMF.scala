@@ -27,7 +27,7 @@ private[distributed] abstract class BaseLMF[T] extends Serializable with Logging
   private var numIterations: Int = 1
   private var learningRate: Float = 0.025f
   protected var numThread: Int = 1
-  private var numPartitions: Int = 1
+  protected var numPartitions: Int = 1
   private var pow: Float = 0f
   private var lambdaL: Float = 0f
   private var lambdaR: Float = 0f

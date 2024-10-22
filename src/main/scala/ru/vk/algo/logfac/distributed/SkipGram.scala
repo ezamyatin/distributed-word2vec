@@ -41,14 +41,11 @@ class SkipGram extends BaseLMF[Array[Long]] {
     assert(!((checkpointInterval > 0) ^ (checkpointPath != null)))
 
     import dataset.sparkSession.sqlContext.implicits._
-    val sc = dataset.sparkSession.sparkContext
 
-    val numExecutors = sc.getConf.get("spark.executor.instances").toInt
-    val numCores = sc.getConf.get("spark.executor.cores").toInt
     val sent = cacheAndCount(dataset
       .select("sequence")
       .as[Array[Long]].rdd
-      .repartition(numExecutors * numCores / numThread))
+      .repartition(numPartitions * 10))
 
     try {
       doFit(sent)

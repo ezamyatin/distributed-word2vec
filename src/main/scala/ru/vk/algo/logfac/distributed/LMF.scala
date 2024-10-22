@@ -51,12 +51,10 @@ class LMF extends BaseLMF[(Long, Long, Float)] {
     import dataset.sparkSession.sqlContext.implicits._
     val sc = dataset.sparkSession.sparkContext
 
-    val numExecutors = sc.getConf.get("spark.executor.instances").toInt
-    val numCores = sc.getConf.get("spark.executor.cores").toInt
     val sent = cacheAndCount(dataset
       .select("user", "item", "rating")
       .as[(Long, Long, Float)].rdd
-      .repartition(numExecutors * numCores / numThread))
+      .repartition(numPartitions * 10))
 
     try {
       doFit(sent)
