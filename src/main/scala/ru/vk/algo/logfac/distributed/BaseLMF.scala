@@ -151,8 +151,11 @@ private[distributed] abstract class BaseLMF[T] extends Serializable with Logging
   private def listFiles(path: String): Array[String] = {
     import tech.ytsaurus.spyt._
     import scala.collection.JavaConverters._
-
-    yt.listNode(path).get().asList().asScala.map(_.stringValue()).toArray
+    if (yt.existsNode(path).get()) {
+      yt.listNode(path).get().asList().asScala.map(_.stringValue()).toArray
+    } else {
+      Array.empty
+    }
   }
 
   protected def pairs(sent: RDD[T],
@@ -167,8 +170,6 @@ private[distributed] abstract class BaseLMF[T] extends Serializable with Logging
 
     val latest = if (checkpointPath != null) {
       listFiles(checkpointPath)
-        .filter(file => listFiles(checkpointPath + "/" + file).contains("_SUCCESS"))
-        .filter(!_.contains("run_params")).filter(_.contains("_"))
         .map(_.split("_").map(_.toInt)).map{case Array(a, b) => (a, b)}
         .sorted.lastOption
     } else {
