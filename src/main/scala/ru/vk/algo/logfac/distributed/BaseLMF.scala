@@ -142,9 +142,7 @@ private[distributed] abstract class BaseLMF[T] extends Serializable with Logging
         .write
         .mode(SaveMode.Overwrite)
         .optimizeFor(OptimizeMode.Scan)
-        .yt("ytTable:/" + path
-          .replace("yt:///", "//")
-          .replace("yt://", "//"))
+        .yt("ytTable:/" + path)
       emb.unpersist()
     }
 
