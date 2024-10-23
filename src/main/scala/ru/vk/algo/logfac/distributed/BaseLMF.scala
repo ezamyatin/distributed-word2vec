@@ -7,6 +7,7 @@ import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode}
 import org.apache.spark.storage.StorageLevel
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.spark.sql.types.{ArrayType, BooleanType, DoubleType, LongType, StructType}
 import ru.vk.algo.logfac.local.{ItemData, Optimizer, Opts}
 import ru.vk.algo.logfac.pair.{LongPair, LongPairMulti, Partitioner}
 import ru.vk.algo.logfac.pair.generator.BatchedGenerator
@@ -137,18 +138,29 @@ private[distributed] abstract class BaseLMF[T] extends Serializable with Logging
     val sqlc = new SQLContext(sc)
     import sqlc.implicits._
     if (emb != null) {
-      emb.map(itemData => (itemData.`type`, itemData.id, itemData.cn, itemData.f))
+      emb
+        .map(itemData => (itemData.`type`, itemData.id,
+          itemData.cn, itemData.f.map(_.toDouble)))
         .toDF("type", "id", "cn", "f")
         .write
+        .option("write_type_v3", true)
         .mode(SaveMode.Overwrite)
         .optimizeFor(OptimizeMode.Scan)
         .yt("ytTable:/" + path)
       emb.unpersist()
     }
 
-    cacheAndCount(sqlc.read.parquet(path)
-      .as[(Boolean, Long, Long, Array[Float])].rdd
-      .map(e => new ItemData(e._1, e._2, e._3, e._4))
+    cacheAndCount(sqlc.read
+      .option("read_type_v3", true)
+      .format("yt")
+      .schemaHint(new StructType()
+        .add("type", BooleanType)
+        .add("id", LongType)
+        .add("cn", LongType)
+        .add("f", ArrayType(DoubleType)))
+      .load("yt:/" + path)
+      .as[(Boolean, Long, Long, Array[Double])].rdd
+      .map(e => new ItemData(e._1, e._2, e._3, e._4.map(_.toFloat)))
     )
   }
 
