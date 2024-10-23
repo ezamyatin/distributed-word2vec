@@ -11,6 +11,7 @@ import ru.vk.algo.logfac.local.{ItemData, Optimizer, Opts}
 import ru.vk.algo.logfac.pair.{LongPair, LongPairMulti, Partitioner}
 import ru.vk.algo.logfac.pair.generator.BatchedGenerator
 import ru.vk.algo.logfac.pair.generator.w2v.{Item2VecGenerator, Pos2NegGenerator, SamplingMode}
+import tech.ytsaurus.spyt.wrapper.table.OptimizeMode
 
 import java.util.Random
 import scala.collection.mutable.ArrayBuffer
@@ -138,7 +139,10 @@ private[distributed] abstract class BaseLMF[T] extends Serializable with Logging
     if (emb != null) {
       emb.map(itemData => (itemData.`type`, itemData.id, itemData.cn, itemData.f))
         .toDF("type", "id", "cn", "f")
-        .write.mode(SaveMode.Overwrite).yt(path)
+        .write
+        .mode(SaveMode.Overwrite)
+        .optimizeFor(OptimizeMode.Scan)
+        .yt(path)
       emb.unpersist()
     }
 
