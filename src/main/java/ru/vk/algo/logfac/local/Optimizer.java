@@ -128,18 +128,22 @@ public class Optimizer {
             ItemData itemData = iterator.next();
 
             if (itemData.type == ItemData.TYPE_LEFT) {
-                int i = vocabL.size();
-                vocabL.put(itemData.id, i);
-                cnL.add(itemData.cn);
-                for (float v : itemData.f) {
-                    rawSyn0.add(v);
+                if (!vocabL.containsKey(itemData.id)) {
+                    int i = vocabL.size();
+                    vocabL.put(itemData.id, i);
+                    cnL.add(itemData.cn);
+                    for (float v : itemData.f) {
+                        rawSyn0.add(v);
+                    }
                 }
             } else {
-                int i = vocabR.size();
-                vocabR.put(itemData.id, i);
-                cnR.add(itemData.cn);
-                for (float v : itemData.f) {
-                    rawSyn1neg.add(v);
+                if (!vocabR.containsKey(itemData.id)) {
+                    int i = vocabR.size();
+                    vocabR.put(itemData.id, i);
+                    cnR.add(itemData.cn);
+                    for (float v : itemData.f) {
+                        rawSyn1neg.add(v);
+                    }
                 }
             }
         }
