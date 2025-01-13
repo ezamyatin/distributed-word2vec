@@ -37,6 +37,8 @@ private[distributed] abstract class BaseLMF[T] extends Serializable with Logging
   protected var intermediateRDDStorageLevel: StorageLevel = StorageLevel.MEMORY_AND_DISK
   protected var checkpointPath: String = _
   protected var checkpointInterval: Int = 0
+  protected var useBPR: Boolean = false
+  protected var verbose: Boolean = false
 
   protected def gamma: Float = 1f
   protected def implicitPref: Boolean = true
@@ -115,6 +117,16 @@ private[distributed] abstract class BaseLMF[T] extends Serializable with Logging
     require(numThread >= 0,
       s"Number of threads ${numThread}")
     this.numThread = numThread
+    this
+  }
+
+  def setUseBPR(useBPR: Boolean): this.type = {
+    this.useBPR = useBPR
+    this
+  }
+
+  def setVerbose(verbose: Boolean): this.type = {
+    this.verbose = verbose
     this
   }
 
@@ -230,10 +242,12 @@ private[distributed] abstract class BaseLMF[T] extends Serializable with Logging
             .map(e => e.part -> e).partitionBy(partitionerKey).values
 
         emb = cur.zipPartitions(embLR) { case (sIt, eItLR) =>
-          val opts = if (implicitPref) {
-            Opts.`implicit`(dotVectorSize, useBias, negative, pow, learningRate, lambdaL, lambdaR, gamma, false)
+          val opts = if (!implicitPref) {
+            Opts.explicit(dotVectorSize, useBias, learningRate, lambdaL, lambdaR, verbose)
+          } else if (useBPR) {
+            Opts.bpr(dotVectorSize, useBias, negative, pow, learningRate, lambdaL, lambdaR, gamma, verbose)
           } else {
-            Opts.explicit(dotVectorSize, useBias, learningRate, lambdaL, lambdaR, false)
+            Opts.`implicit`(dotVectorSize, useBias, negative, pow, learningRate, lambdaL, lambdaR, gamma, verbose)
           }
 
           var time = System.currentTimeMillis()
