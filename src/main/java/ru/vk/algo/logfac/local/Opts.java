@@ -17,9 +17,10 @@ public class Opts implements Serializable {
     public final float gamma;
     public final boolean implicit;
     public final boolean verbose;
+    public final boolean bpr;
 
     private Opts(int dim, boolean useBias, int negative, float pow, float lr,
-                 float lambdaL, float lambdaR, float gamma, boolean implicit, boolean verbose) {
+                 float lambdaL, float lambdaR, float gamma, boolean implicit, boolean verbose, boolean bpr) {
         this.dim = dim;
         this.useBias = useBias;
         this.negative = negative;
@@ -30,15 +31,21 @@ public class Opts implements Serializable {
         this.gamma = gamma;
         this.implicit = implicit;
         this.verbose = verbose;
+        this.bpr = bpr;
     }
 
     public static Opts implicit(int dim, boolean useBias, int negative, float pow, float lr,
                                 float lambdaL, float lambdaR, float gamma, boolean verbose) {
-        return new Opts(dim, useBias, negative, pow, lr, lambdaL, lambdaR, gamma, true, verbose);
+        return new Opts(dim, useBias, negative, pow, lr, lambdaL, lambdaR, gamma, true, verbose, false);
+    }
+
+    public static Opts bpr(int dim, boolean useBias, int negative, float pow, float lr,
+                           float lambdaL, float lambdaR, float gamma, boolean verbose) {
+        return new Opts(dim, useBias, negative, pow, lr, lambdaL, lambdaR, gamma, true, verbose, true);
     }
 
     public static Opts explicit(int dim, boolean useBias, float lr, float lambdaL, float lambdaR, boolean verbose) {
-        return new Opts(dim, useBias, 0, Float.NaN, lr, lambdaL, lambdaR, Float.NaN, false, verbose);
+        return new Opts(dim, useBias, 0, Float.NaN, lr, lambdaL, lambdaR, Float.NaN, false, verbose, false);
     }
 
     public int vectorSize() {

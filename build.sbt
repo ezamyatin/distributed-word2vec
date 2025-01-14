@@ -2,7 +2,7 @@ lazy val root = (project in file("."))
   .settings(
     name := "logfac-yt",
     organization := "ru.vk.algo",
-    version := "1.0",
+    version := "1.1",
     scalaVersion := "2.12.15",
   )
 

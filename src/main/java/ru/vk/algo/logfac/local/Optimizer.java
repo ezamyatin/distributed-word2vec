@@ -1,18 +1,19 @@
 package ru.vk.algo.logfac.local;
 
-import ru.vk.algo.logfac.pair.LongPairMulti;
-import com.google.common.collect.Iterators;
-import com.google.common.util.concurrent.AtomicDouble;
-import it.unimi.dsi.fastutil.floats.FloatArrayList;
-import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
-import com.github.fommil.netlib.BLAS;
-import it.unimi.dsi.fastutil.longs.LongArrayList;
-
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Consumer;
 import java.util.function.LongConsumer;
+
+import com.github.fommil.netlib.BLAS;
+import com.google.common.collect.Iterators;
+import com.google.common.util.concurrent.AtomicDouble;
+import it.unimi.dsi.fastutil.floats.FloatArrayList;
+import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongArrayList;
+import ru.vk.algo.logfac.pair.LongPairMulti;
 
 /**
  * @author ezamyatin
@@ -38,9 +39,9 @@ public class Optimizer {
             int i = 0;
             while (i < EXP_TABLE_SIZE) {
                 double tmp = Math.exp((2.0 * i / EXP_TABLE_SIZE - 1.0) * MAX_EXP);
-                sigm[i] = (float)(tmp / (tmp + 1.0));
-                loss0[i] = (float)Math.log(1 - sigm[i]);
-                loss1[i] = (float)Math.log(sigm[i]);
+                sigm[i] = (float) (tmp / (tmp + 1.0));
+                loss0[i] = (float) Math.log(1 - sigm[i]);
+                loss1[i] = (float) Math.log(sigm[i]);
                 i += 1;
             }
         }
@@ -55,7 +56,7 @@ public class Optimizer {
             } else if (f < -ExpTable.MAX_EXP) {
                 return 0.0f;
             } else {
-                int ind = (int)((f + ExpTable.MAX_EXP) * (ExpTable.EXP_TABLE_SIZE / ExpTable.MAX_EXP / 2.0));
+                int ind = (int) ((f + ExpTable.MAX_EXP) * (ExpTable.EXP_TABLE_SIZE / ExpTable.MAX_EXP / 2.0));
                 return this.sigm[ind];
             }
         }
@@ -64,9 +65,9 @@ public class Optimizer {
             if (f > ExpTable.MAX_EXP) {
                 return (-(label > 0 ? 0f : -6.00247569f));
             } else if (f < -ExpTable.MAX_EXP) {
-                return  (-(label > 0 ? -6.00247569f : 0f));
+                return (-(label > 0 ? -6.00247569f : 0f));
             } else {
-                int ind = (int)((f + ExpTable.MAX_EXP) * (ExpTable.EXP_TABLE_SIZE / ExpTable.MAX_EXP / 2.0));
+                int ind = (int) ((f + ExpTable.MAX_EXP) * (ExpTable.EXP_TABLE_SIZE / ExpTable.MAX_EXP / 2.0));
                 return (-((label > 0) ? this.loss1[ind] : this.loss0[ind]));
             }
         }
@@ -179,7 +180,7 @@ public class Optimizer {
     }
 
     public static float[] initEmbedding(int dim, boolean useBias, Random rnd) {
-        float[] f = new float[useBias ? dim + 1: dim];
+        float[] f = new float[useBias ? dim + 1 : dim];
         for (int i = 0; i < dim; i++) {
             f[i] = (rnd.nextFloat() - 0.5f) / dim;
         }
@@ -231,8 +232,8 @@ public class Optimizer {
         ExpTable expTable = ExpTable.getInstance();
 
         while (pos < batch.left.length) {
-            lastWord = (int)batch.left[pos];
-            word = (int)batch.right[pos];
+            lastWord = (int) batch.left[pos];
+            word = (int) batch.right[pos];
 
             if (word != -1 && lastWord != -1) {
                 int l1 = lastWord * opts.vectorSize();
@@ -307,6 +308,101 @@ public class Optimizer {
         lossReg.addAndGet(llossReg);
     }
 
+    private void optimizeImplicitBatchBPR(LongPairMulti batch) {
+        assert batch.left.length == batch.right.length;
+        assert batch.label == null;
+
+        shuffle(batch, random);
+
+        int batchIdx = 0;
+        int positiveId, anchorId;
+        float[] posUpdatesTmpHolder = new float[opts.vectorSize()];
+        float[] anchorUpdatesTmpHolder = new float[opts.vectorSize()];
+        ExpTable expTable = ExpTable.getInstance();
+
+        while (batchIdx < batch.left.length) {
+            anchorId = (int) batch.left[batchIdx];
+            positiveId = (int) batch.right[batchIdx];
+
+            if (positiveId == -1 || anchorId == -1) {
+                batchIdx++;
+                continue;
+            }
+
+            float weight = batch.weight == null ? 1f : batch.weight[batchIdx];
+
+            int anchorOffset = anchorId * opts.vectorSize();
+            int positiveOffset = positiveId * opts.vectorSize();
+
+            float positiveDot = blas.sdot(opts.dim, syn0, anchorOffset, 1, syn1neg, positiveOffset, 1);
+            if (opts.useBias) {
+                positiveDot += syn0[anchorOffset + opts.dim];
+                positiveDot += syn1neg[positiveOffset + opts.dim];
+            }
+
+            Arrays.fill(anchorUpdatesTmpHolder, 0);
+            Arrays.fill(posUpdatesTmpHolder, 0);
+
+            int negativeId;
+
+            int d = 0;
+            while (d < opts.negative) {
+                if (unigramTable != null) {
+                    negativeId = unigramTable[random.nextInt(unigramTable.length)];
+                    while (negativeId == -1 || batch.left[batchIdx] == i2R[negativeId]) {
+                        negativeId = unigramTable[random.nextInt(unigramTable.length)];
+                    }
+                } else {
+                    negativeId = random.nextInt(vocabR.size());
+                    while (batch.left[batchIdx] == i2R[negativeId]) {
+                        negativeId = random.nextInt(vocabR.size());
+                    }
+                }
+                int negativeOffset = negativeId * opts.vectorSize();
+                float negativeDot = blas.sdot(opts.dim, syn0, anchorOffset, 1, syn1neg, negativeOffset, 1);
+                if (opts.useBias) {
+                    negativeDot += syn0[anchorOffset + opts.dim];
+                    negativeDot += syn1neg[negativeOffset + opts.dim];
+                }
+                float xHat = positiveDot - negativeDot;
+                float sigm = expTable.sigmoid(xHat);
+
+                // anchor update
+                if (opts.lambdaL > 0) {
+                    blas.saxpy(opts.dim, -opts.lambdaL * opts.lr * weight, syn0, anchorOffset, 1, anchorUpdatesTmpHolder, 0, 1);
+                }
+                blas.saxpy(opts.dim, sigm * opts.lr * weight, syn1neg, positiveOffset, 1, anchorUpdatesTmpHolder, 0, 1);
+                blas.saxpy(opts.dim, -sigm * opts.lr * weight, syn1neg, negativeOffset, 1, anchorUpdatesTmpHolder, 0, 1);
+                if (opts.useBias) {
+                    anchorUpdatesTmpHolder[opts.dim] += sigm * opts.lr * weight;
+                }
+
+                // positive update
+                if (opts.lambdaR > 0) {
+                    blas.saxpy(opts.dim, -opts.lambdaR * opts.lr * weight, syn1neg, positiveOffset, 1, posUpdatesTmpHolder, 0, 1);
+                }
+                blas.saxpy(opts.dim, sigm * opts.lr * weight, syn0, anchorOffset, 1, posUpdatesTmpHolder, 0, 1);
+                if (opts.useBias) {
+                    posUpdatesTmpHolder[opts.dim] += sigm * opts.lr * weight;
+                }
+
+                // negative update
+                if (opts.lambdaR > 0) {
+                    blas.saxpy(opts.dim, -opts.lambdaR * opts.lr * weight, syn1neg, negativeOffset, 1, syn1neg, negativeOffset, 1);
+                }
+                blas.saxpy(opts.dim, -sigm * opts.lr * weight, syn0, anchorOffset, 1, syn1neg, negativeOffset, 1);
+                if (opts.useBias) {
+                    syn1neg[negativeOffset + opts.dim] -= sigm * opts.lr * weight;
+                }
+
+                d++;
+            }
+            blas.saxpy(opts.vectorSize(), 1.0f, anchorUpdatesTmpHolder, 0, 1, syn0, anchorOffset, 1);
+            blas.saxpy(opts.vectorSize(), 1.0f, posUpdatesTmpHolder, 0, 1, syn1neg, positiveOffset, 1);
+            batchIdx += 1;
+        }
+    }
+
     private void optimizeExplicitBatchRemapped(LongPairMulti batch) {
         assert batch.left.length == batch.right.length;
         assert Float.isNaN(opts.gamma);
@@ -322,8 +418,8 @@ public class Optimizer {
         ExpTable expTable = ExpTable.getInstance();
 
         while (pos < batch.left.length) {
-            lastWord = (int)batch.left[pos];
-            word = (int)batch.right[pos];
+            lastWord = (int) batch.left[pos];
+            word = (int) batch.right[pos];
 
             if (word != -1 && lastWord != -1) {
                 Arrays.fill(neu1e, 0);
@@ -385,11 +481,19 @@ public class Optimizer {
                 return data.next().remap(vocabL, vocabR);
             }
         };
+        Consumer<LongPairMulti> optimizer;
+        if (!opts.implicit) {
+            optimizer = this::optimizeExplicitBatchRemapped;
+        } else if (opts.bpr) {
+            optimizer = this::optimizeImplicitBatchBPR;
+        } else {
+            optimizer = this::optimizeImplicitBatchRemapped;
+        }
 
         if (cpus == 1) {
-            remapped.forEachRemaining(opts.implicit ? this::optimizeImplicitBatchRemapped : this::optimizeExplicitBatchRemapped);
+            remapped.forEachRemaining(optimizer);
         } else {
-            ParItr.foreach(remapped, cpus, opts.implicit ? this::optimizeImplicitBatchRemapped : this::optimizeExplicitBatchRemapped);
+            ParItr.foreach(remapped, cpus, optimizer);
         }
     }
 
